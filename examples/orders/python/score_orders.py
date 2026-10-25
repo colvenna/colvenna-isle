@@ -23,7 +23,7 @@ ARROW_SCHEMA = pa.schema(
 def run(context_path: Path, output_dir: Path) -> None:
     context = json.loads(context_path.read_text(encoding="utf-8"))
     if context["contract_version"] != 2 or context["input_mode"] != "local_files":
-        raise ValueError("This example requires contract v1 with local_files inputs")
+        raise ValueError("This example requires contract v2 with local_files inputs")
     if output_dir.resolve() != Path(context["output"]["directory"]).resolve():
         raise ValueError("Output directory must match the runner's context")
     threshold = Decimal(context["parameters"]["high_value_threshold"])

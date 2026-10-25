@@ -26,10 +26,10 @@ Colvenna Isle 是面向 AWS 的数据库与分析产品，整合 API 接入、S3
 
 下一版本完成代码、配置、协议与数据中的 Colvenna 标识迁移；`main` 为 `2.0.0.dev0`（未发行）。这是大版本破坏性升级，见[迁移设计](docs/design/identifier-migration.md)；候选的 AWS 验收为 `NOT_RUN`。
 
-已发布的 1.1.0（[GitHub Release `v1.1.0`](https://github.com/colvenna/colvenna-isle/releases/tag/v1.1.0)）包含当前合同与能力，均已在实际 AWS 中验收：
+已发布的 1.1.0（[GitHub Release `v1.1.0`](https://github.com/colvenna/colvenna-isle/releases/tag/v1.1.0)）提供历史 1.x 接口与能力，以下属于该版本的实际 AWS 验收：
 
 - 由你选择的单个 AWS 账号（账号 ID 来自部署环境，不写在源码中）、ARM64；
-- 安装时指定的标准 AWS 商业区域（`--region` / `COLVENNA_REGION`）：`us-east-2` 完成全新安装、全部 56 项功能 UAT、备份与隔离还原、升级、中断重部署与卸载，`us-west-2` 完成回归；其他商业区域在配置上可用，但未单独验收；
+- 安装时指定的标准 AWS 商业区域（`--region`）：`us-east-2` 完成全新安装、全部 56 项功能 UAT、备份与隔离还原、升级、中断重部署与卸载，`us-west-2` 完成回归；其他商业区域在配置上可用，但未单独验收；
 - 运行在 S3 对象文件系统上的 DuckDB 1.5.6；
 - 写者与查询服务规格为 2 vCPU / 4 GiB。
 
@@ -48,7 +48,7 @@ Colvenna Isle 是面向 AWS 的数据库与分析产品，整合 API 接入、S3
 
 ## 开始使用
 
-1. 在 tag `v1.1.0` 的干净检出中运行 `./install.sh fresh --environment <名称> --account <账号 ID> --region <区域>`。它先检查部署主机（带实例角色的 ARM64 EC2，以及 Python 3.12、支持 `linux/arm64` 的 Docker、Node.js），再构建 release 并安装为一个新环境。见[安装部署手册](docs/installation.md)。
+1. 为当前候选准备已审查提交的干净检出，运行 `./install.sh fresh --environment <名称> --account <账号 ID> --region <区域>`。它先检查部署主机（带实例角色的 ARM64 EC2，以及 Python 3.12、支持 `linux/arm64` 的 Docker、Node.js），再构建 release 并安装为一个新环境。见[安装部署手册](docs/installation.md)。
 2. 开通空间并签发首个管理员 Key，然后运行 [quickstart](examples/quickstart/README.md)。它覆盖 API 接入、同步表写入与 `after_write` 读回，以及发布后的 SQL + pandas 流水线结果查询。
 3. 继续阅读[用户手册](docs/user-guide.md)与 [API 契约](docs/design/api-contract.md)。
 

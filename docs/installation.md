@@ -131,7 +131,7 @@ python3 -m venv /tmp/colvenna-build
 
 ```json
 "storage_repository": "colvenna-isle-images",
-"storage_digest": "sha256:8ec8ab61…"
+"storage_digest": "sha256:88618d13…"
 ```
 
 构建 release 时，这个镜像必须已经发布在本账号的 ECR 中，并且已经拉取到构建主机：
@@ -139,7 +139,8 @@ python3 -m venv /tmp/colvenna-build
 ```bash
 aws ecr get-login-password --region "$COLVENNA_REGION" | \
   docker login --username AWS --password-stdin $COLVENNA_ACCOUNT.dkr.ecr.$COLVENNA_REGION.amazonaws.com
-docker pull $COLVENNA_ACCOUNT.dkr.ecr.$COLVENNA_REGION.amazonaws.com/colvenna-isle-images@sha256:8ec8ab61…
+STORAGE_DIGEST=$(python3 -c 'import json; print(json.load(open("runtime/writer-lock.json"))["storage_digest"])')
+docker pull "$COLVENNA_ACCOUNT.dkr.ecr.$COLVENNA_REGION.amazonaws.com/colvenna-isle-images@$STORAGE_DIGEST"
 ```
 
 账号中还没有这个镜像时，先从固定的上游源码构建并发布：
@@ -320,7 +321,7 @@ $COLVENNA /tmp/colvenna-build/bin/python scripts/aws/admission.py timing --timin
 
 ## 10. 破坏性升级
 
-2.0.0 的 Python、配置、协议与系统列改名是大版本破坏性升级，契约 revision 为 2、原生空间格式为 6，旧名称不再作为别名接受。执行前按[迁移设计](design/identifier-migration.md)停止生产者与调度、核对 UNKNOWN，在旧服务仍可查询时导出完整 ODS 事件（包括删除 tombstone）和 direct 业务行，核对类型与行数并生成受保护的重放计划。然后用旧 tag 的工具备份、关闭、卸载旧运行时，保留历史备份库。用新源码全新安装、注册数据集、重放 ODS 与 direct 业务数据、重新发布并全量重建流水线和键状态。新系统列由写者重新生成，旧回执与水位不沿用。旧原生备份只能按旧版本隔离还原，不能直接还原到格式 6。
+2.0.0 的 Python、配置、协议与系统列改名是大版本破坏性升级，契约 revision 为 2、原生空间格式为 6，旧名称不再作为别名接受。执行前按[迁移设计](design/identifier-migration.md)停止生产者与调度、核对 UNKNOWN，在旧服务仍运行时用旧 tag 的工具创建并核对一致性备份；从校验后的原生备份 Parquet 提取完整 ODS 事件（包括删除 tombstone）和 direct 业务行，核对类型与行数并生成受保护的重放计划。然后用旧 tag 的工具关闭、卸载旧运行时，保留历史备份库。用新源码全新安装、注册数据集、重放 ODS 与 direct 业务数据、重新发布并全量重建流水线和键状态。新系统列由写者重新生成，旧回执与水位不沿用。旧原生备份只能按旧版本隔离还原，不能直接还原到格式 6。
 
 新工具不能发现或清理旧资源名与旧标签。存储镜像因 `/opt/colvenna` 路径变更更新了 digest；不能仅复制旧镜像并沿用旧 digest，需将新锁定镜像发布到目标账号与区域的 `colvenna-isle-images`。本地构建可用 `build_product.py --storage-image <local-image-reference>` 验证尚未发布的镜像，仍必须匹配锁定的 image ID / ARM64。`upgrade` 只适用于同命名空间、同契约与原生格式内的源码升级；跨格式必须使用上述导出 / 重建路径。
 

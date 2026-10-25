@@ -1,6 +1,6 @@
 # Python 任务的输入、输出与执行合同
 
-合同版本：1。适用版本：1.1.0。Python 适配器负责固定描述、独立执行和 staging，唯一写者负责原生导入与发布；完整流水线中的 pandas 任务按本合同运行。[pandas 示例](../../examples/orders/python/score_orders.py) 可在本地运行。
+合同版本：2。适用版本：2.0.0 候选；本文使用当前标识与契约，AWS 验收仅属于历史 1.1.0。Python 适配器负责固定描述、独立执行和 staging，唯一写者负责原生导入与发布；完整流水线中的 pandas 任务按本合同运行。[pandas 示例](../../examples/orders/python/score_orders.py) 可在本地运行。
 
 固定输入由写者在一个原生读事务内导出：输入按明确水位或 release 绑定为 Parquet 文件、schema、对象版本/hash 和完整清单。持续接入期间，已绑定的输入保持不变，新的运行才看到新水位；写者替换后，原清单仍可读取。执行角色的读写范围见第 6 节。
 

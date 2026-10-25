@@ -1,6 +1,6 @@
 # 同步业务表写入
 
-适用版本：1.1.0。同步写由机器合同校验、原生事务和独立私网代理实现；接口见 [API 契约](api-contract.md#synchronous-table-writes)，使用方式见[用户手册](../user-guide.md)。公开写后查询（`after_write`）见第 6 节。多 DuckDB 分片与独立写者只是尚未设计的演进方向，不在 1.1.0 范围内（见[发行说明](../release-notes.md#计划中尚未实现)）。
+适用版本：2.0.0 候选；本文使用当前标识与契约，AWS 验收仅属于历史 1.1.0。同步写由机器合同校验、原生事务和独立私网代理实现；接口见 [API 契约](api-contract.md#synchronous-table-writes)，使用方式见[用户手册](../user-guide.md)。公开写后查询（`after_write`）见第 6 节。多 DuckDB 分片与独立写者只是尚未设计的演进方向，不在 1.1.0 范围内（见[发行说明](../release-notes.md#计划中尚未实现)）。
 
 ## 1. 写入目标与成功语义
 
@@ -78,7 +78,7 @@ HTTP 超时不承诺数据库回滚，也不自动转成 `202` 异步接入。�
 
 重试窗口为 30 天，回执与身份至少保留至窗口结束；1.1.0 保守保留整个 generation 的记录，不自动回收 UNKNOWN。写者在排队前以条件创建保存 `spaces/<space>/write-intents/<generation>/<write_id>.json` 原请求，绑定首个 principal、规范化业务摘要、schema 和源提交。S3 原请求不是异步派发队列或提交凭证；`ctl.writes` 始终是权威结果。代理没有 S3 写入权限。
 
-1.1.0 的原生格式为 5。物理表实际创建结构化 `constraints.primary_key / unique / foreign_keys / checks` 和 `indexes`，并封存列、原生约束及索引的目录摘要。外键引用只能指向已注册的直接写目标；不得用注册键代替原生唯一约束。格式变化时停止旧实例并使用新的 generation，不迁移旧格式（见[安装部署手册](../installation.md#10-破坏性升级)）。
+当前候选的原生格式为 6。历史 1.1.0 为格式 5。物理表实际创建结构化 `constraints.primary_key / unique / foreign_keys / checks` 和 `indexes`，并封存列、原生约束及索引的目录摘要。外键引用只能指向已注册的直接写目标；不得用注册键代替原生唯一约束。格式变化时停止旧实例并使用新的 generation，不迁移旧格式（见[安装部署手册](../installation.md#10-破坏性升级)）。
 
 ## 6. 写后读取与分析发布
 
