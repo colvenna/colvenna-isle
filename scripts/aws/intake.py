@@ -35,7 +35,7 @@ def deploy_intake(current, baseline, artifact, head, directory, *, enabled=False
     cf = current.client("cloudformation")
     (directory / "template.json").write_text(body + "\n")
     (directory / "validation.json").write_text(encode(cf.validate_template(**template_arguments(current, body))))
-    token = "cove-intake-" + uuid.uuid4().hex
+    token = "colvenna-intake-" + uuid.uuid4().hex
     (directory / "admission.json").write_text(encode({
         "stack_id": baseline["StackId"], "source_commit": head, "artifact": artifact,
         "intake_enabled": enabled, "client_request_token": token,

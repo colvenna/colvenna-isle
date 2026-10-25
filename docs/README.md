@@ -39,3 +39,5 @@
 - [浅色 logo](assets/logo-light.svg)、[深色 logo](assets/logo-dark.svg)、[图标](assets/icon.svg)。
 - [README 架构图](assets/architecture.svg)。
 - [品牌说明](assets/README.md)。
+
+- [Colvenna 标识与 1.x 业务数据迁移](design/identifier-migration.md)

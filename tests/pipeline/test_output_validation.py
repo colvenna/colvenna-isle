@@ -12,10 +12,10 @@ from pathlib import Path
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from cove_duckdb.contracts.validation import ContractError
-from cove_duckdb.control.registry import ControlError
-from cove_duckdb.pipeline.output_validation import OutputValidator
-from cove_duckdb.pipeline.parquet import write
+from colvenna_isle.contracts.validation import ContractError
+from colvenna_isle.control.registry import ControlError
+from colvenna_isle.pipeline.output_validation import OutputValidator
+from colvenna_isle.pipeline.parquet import write
 
 
 COLUMNS = [{"name": "id", "type": "BIGINT", "nullable": False},
@@ -30,7 +30,7 @@ class OutputChecks(unittest.TestCase):
         self.workspace = Path(self.temporary.name) / "job_one" / "attempt_one" / "exec_one"
         self.directory = self.workspace / "output" / "result"
         self.directory.mkdir(parents=True)
-        self.context = {"contract_version": 1, "space_id": "space_one", "pipeline_id": "demo",
+        self.context = {"contract_version": 2, "space_id": "space_one", "pipeline_id": "demo",
                         "pipeline_version": "v1", "run_id": "run_one", "task_id": "transform",
                         "job_id": "job_one", "attempt_id": "attempt_one", "execution_id": "exec_one",
                         "input_mode": "local_files", "parameters": {},
@@ -41,7 +41,7 @@ class OutputChecks(unittest.TestCase):
                             "directory": str(self.directory), "write_mode": "versioned_replace",
                             "expected_previous_release": None, "key_columns": ["id"],
                             "allow_empty": True, "replace_partitions": [], "schema": copy.deepcopy(COLUMNS)}}
-        self.manifest = {"contract_version": 1, "job_id": "job_one", "attempt_id": "attempt_one",
+        self.manifest = {"contract_version": 2, "job_id": "job_one", "attempt_id": "attempt_one",
                          "execution_id": "exec_one", "output_name": "result", "format": "parquet",
                          "schema": copy.deepcopy(COLUMNS), "row_count": 0, "files": []}
         self.validator = OutputValidator(maximum_bytes=1048576, maximum_rows=1000)

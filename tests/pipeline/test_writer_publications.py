@@ -7,13 +7,13 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from cove_duckdb.control.pipelines import DEFINITION_EPOCH
-from cove_duckdb.control.registry import ControlError, Principal, canonical
-from cove_duckdb.pipeline.input_exports import InputExports
-from cove_duckdb.writer.publications import Publisher
-from cove_duckdb.writer.scheduler import Scheduler
-from cove_duckdb.writer.ingestion import digest
-from cove_duckdb.writer.writes import WriteStore, write_id
+from colvenna_isle.control.pipelines import DEFINITION_EPOCH
+from colvenna_isle.control.registry import ControlError, Principal, canonical
+from colvenna_isle.pipeline.input_exports import InputExports
+from colvenna_isle.writer.publications import Publisher
+from colvenna_isle.writer.scheduler import Scheduler
+from colvenna_isle.writer.ingestion import digest
+from colvenna_isle.writer.writes import WriteStore, write_id
 import test_publications as native_fixture
 
 
@@ -60,7 +60,7 @@ class WriterPublicationCommands(unittest.TestCase):
         self.native_inputs = InputExports(self.fixture.native)
         self.native_inputs.initialize()
         binding = self.descriptor["inputs"]["source"]
-        manifest = {"contract_version": 1, **{name: binding[name] for name in [
+        manifest = {"contract_version": 2, **{name: binding[name] for name in [
             "dataset", "release_id", "watermark", "schema", "files"]}}
         portable = {"space_id": "owned", "generation": "gen_owned", "export_id": "input_original",
             "inputs": {"source": {"manifest": manifest, "selection": {"mode": "snapshot"}}}}
@@ -167,7 +167,7 @@ class WriterPublicationCommands(unittest.TestCase):
         self.grant()
         changed = copy.deepcopy(self.descriptor)
         changed["inputs"]["source"]["watermark"]["ods_sequence"] = 900
-        manifest = {"contract_version": 1, **{name: changed["inputs"]["source"][name] for name in [
+        manifest = {"contract_version": 2, **{name: changed["inputs"]["source"][name] for name in [
             "dataset", "release_id", "watermark", "schema", "files"]}}
         changed["inputs"]["source"]["manifest_sha256"] = digest(manifest)
         store = self.store()
@@ -236,7 +236,7 @@ class WriterPublicationCommands(unittest.TestCase):
                 self.fixture.reference(replacement), replacement, self.authority, expected_epoch=2))
 
     def test_output_preparation_allows_ingress_then_chunks_publish_original_atomic_state(self):
-        from cove_duckdb.pipeline.candidates import Candidates
+        from colvenna_isle.pipeline.candidates import Candidates
 
         self.grant()
         value = self.fixture.select(self.fixture.store.status("job_one"), [513])
@@ -285,7 +285,7 @@ class WriterPublicationCommands(unittest.TestCase):
             self.assertEqual(self.fixture.sequence(), sequence)
 
     def test_background_writer_import_commits_a_complete_bound_data_state_pair(self):
-        from cove_duckdb.pipeline.candidates import Candidates
+        from colvenna_isle.pipeline.candidates import Candidates
 
         self.fixture.bind_state()
         self.snapshot["datasets"]["dwd.result"] = self.fixture.configuration["datasets"]["dwd.result"]["definition_sha256"]

@@ -18,7 +18,7 @@ phases:
       - 'python3 -m pip install --require-hashes --only-binary=:all: --no-compile -r runtime/contracts-requirements.lock -r runtime/aws-requirements.lock'
   build:
     commands:
-      - 'python3 scripts/build_environment.py --output /tmp/cove-environment-build'
+      - 'python3 scripts/build_environment.py --output /tmp/colvenna-environment-build'
 """
 
 
@@ -45,7 +45,7 @@ def main():
     manifest = {
         "source_commit": head, "source_tree": tree,
         "adapter_sha256": hashlib.sha256(content[
-            "src/cove_duckdb/pipeline/environment_adapter.py"]).hexdigest(),
+            "src/colvenna_isle/pipeline/environment_adapter.py"]).hexdigest(),
         "files": {name: hashlib.sha256(raw).hexdigest() for name, raw in content.items()},
     }
     raw_manifest = canonical(manifest).encode()

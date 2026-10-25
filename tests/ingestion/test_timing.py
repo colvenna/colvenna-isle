@@ -8,7 +8,7 @@ import unittest
 from unittest.mock import patch
 
 import test_direct as fixture_module
-from cove_duckdb.timing import NOT_TIMED, Timing, io_delta
+from colvenna_isle.timing import NOT_TIMED, Timing, io_delta
 
 APPROVED = {"event", "path", "request_id", "space_id", "generation", "write_id", "ingestion_id", "message_id",
             "receive_count", "dataset", "operation", "outcome", "process", "total_ms", "segments",
@@ -17,7 +17,7 @@ APPROVED = {"event", "path", "request_id", "space_id", "generation", "write_id",
 
 class TimingTests(unittest.TestCase):
     def test_nested_segments_report_parent_remainders_and_adopted_remote_segments(self):
-        with patch.dict(os.environ, {"COVE_TIMING": "on"}):
+        with patch.dict(os.environ, {"COLVENNA_TIMING": "on"}):
             timing = Timing("sync_write", request_id="r1")
             with timing.segment("writer_rpc"):
                 pass
@@ -36,7 +36,7 @@ class TimingTests(unittest.TestCase):
         self.assertAlmostEqual(value["unattributed_ms"]["writer_rpc"], names["writer_rpc"]["ms"] - 2.0 - 3.0, 3)
 
     def test_off_switch_records_and_emits_nothing(self):
-        with patch.dict(os.environ, {"COVE_TIMING": "off"}):
+        with patch.dict(os.environ, {"COLVENNA_TIMING": "off"}):
             timing = Timing("sync_write", request_id="r1")
             with timing.segment("authenticate"):
                 pass
@@ -64,12 +64,12 @@ class TimingTests(unittest.TestCase):
                      ("update", {"updates": [{"key": {"id": 5}, "set": {"amount": "3.00"}},
                                              {"key": {"id": 99}, "set": {"region": "none"}}]}),
                      ("delete", {"keys": [{"id": 5}, {"id": 99}]})]
-            with patch.dict(os.environ, {"COVE_TIMING": "on"}), contextlib.redirect_stdout(stream):
+            with patch.dict(os.environ, {"COLVENNA_TIMING": "on"}), contextlib.redirect_stdout(stream):
                 results = [fixture.direct.execute(fixture.rpc(operation, {
                     "dataset": "dwd.orders", "schema_version": 1, "operation": operation, **form}))
                     for operation, form in forms]
             self.assertEqual([value["status"] for value in results], [200, 200, 200, 200])
-            lines = [json.loads(line) for line in stream.getvalue().splitlines() if "COVE_TIMING" in line]
+            lines = [json.loads(line) for line in stream.getvalue().splitlines() if "COLVENNA_TIMING" in line]
             self.assertEqual([(line["operation"], line["counters"]["records"]) for line in lines],
                              [("insert", 1), ("upsert", 1), ("update", 2), ("delete", 2)])
         finally:
@@ -80,10 +80,10 @@ class TimingTests(unittest.TestCase):
         fixture.setUp()
         try:
             stream = io.StringIO()
-            with patch.dict(os.environ, {"COVE_TIMING": "on"}), contextlib.redirect_stdout(stream):
+            with patch.dict(os.environ, {"COLVENNA_TIMING": "on"}), contextlib.redirect_stdout(stream):
                 value = fixture.direct.execute({**fixture.rpc(), "request_id": "gateway-request-1"})
             self.assertEqual(value["status"], 200)
-            lines = [json.loads(line) for line in stream.getvalue().splitlines() if "COVE_TIMING" in line]
+            lines = [json.loads(line) for line in stream.getvalue().splitlines() if "COLVENNA_TIMING" in line]
             self.assertEqual(len(lines), 1)
             line = lines[0]
             self.assertLessEqual(set(line), APPROVED)

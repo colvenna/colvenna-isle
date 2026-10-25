@@ -15,16 +15,16 @@ from pathlib import Path
 import duckdb
 import pyarrow.parquet as pq
 
-from cove_duckdb.contracts.model import KEY_STATE_METADATA
-from cove_duckdb.contracts.validation import wire_schema
-from cove_duckdb.control.pipelines import DEFINITION_EPOCH
-from cove_duckdb.control.registry import ControlError, canonical
-from cove_duckdb.pipeline.native_inputs import capture
-from cove_duckdb.pipeline.publications import Publications, resolve_release
-from cove_duckdb.pipeline.task_descriptor import descriptor_key
-from cove_duckdb.pipeline.sql_task import connect, seal, statement
-from cove_duckdb.writer.ingestion import IngestionStore, digest
-from cove_duckdb.writer.pipeline_reads import impact, watermarks
+from colvenna_isle.contracts.model import KEY_STATE_METADATA
+from colvenna_isle.contracts.validation import wire_schema
+from colvenna_isle.control.pipelines import DEFINITION_EPOCH
+from colvenna_isle.control.registry import ControlError, canonical
+from colvenna_isle.pipeline.native_inputs import capture
+from colvenna_isle.pipeline.publications import Publications, resolve_release
+from colvenna_isle.pipeline.task_descriptor import descriptor_key
+from colvenna_isle.pipeline.sql_task import connect, seal, statement
+from colvenna_isle.writer.ingestion import IngestionStore, digest
+from colvenna_isle.writer.pipeline_reads import impact, watermarks
 
 ODS = {"dataset": "ods.orders", "schema_version": 1,
        "schema": [{"name": "event_id", "type": "VARCHAR", "nullable": False},
@@ -51,27 +51,27 @@ FLAGS_SCHEMA = [{"name": "flag", "type": "VARCHAR", "nullable": False},
                 {"name": "value", "type": "BIGINT", "nullable": False}]
 FLAGS = {"dataset": "dws.flags", "schema_version": 1, "schema": FLAGS_SCHEMA, "key_columns": ["flag"],
          "partition_columns": [], "write_owner": "pipeline"}
-METADATA = [{"name": "_cove_version", "type": "BIGINT", "nullable": False},
-            {"name": "_cove_sequence", "type": "BIGINT", "nullable": False}]
+METADATA = [{"name": "_colvenna_version", "type": "BIGINT", "nullable": False},
+            {"name": "_colvenna_sequence", "type": "BIGINT", "nullable": False}]
 CLEAN = """
 WITH ranked AS (
   SELECT *, row_number() OVER (PARTITION BY order_id
-                               ORDER BY version DESC, _cove_commit_sequence DESC) AS version_rank
+                               ORDER BY version DESC, _colvenna_commit_sequence DESC) AS version_rank
   FROM changes)
-SELECT CASE WHEN c._cove_operation = 'delete' THEN 'DELETE' ELSE 'UPSERT' END AS _cove_op,
+SELECT CASE WHEN c._colvenna_operation = 'delete' THEN 'DELETE' ELSE 'UPSERT' END AS _colvenna_op,
        c.order_id,
-       CASE WHEN c._cove_operation = 'delete' THEN NULL ELSE c.order_date END AS order_date,
-       CASE WHEN c._cove_operation = 'delete' THEN NULL ELSE c.amount END AS amount,
-       c.version AS _cove_version, c._cove_commit_sequence AS _cove_sequence
+       CASE WHEN c._colvenna_operation = 'delete' THEN NULL ELSE c.order_date END AS order_date,
+       CASE WHEN c._colvenna_operation = 'delete' THEN NULL ELSE c.amount END AS amount,
+       c.version AS _colvenna_version, c._colvenna_commit_sequence AS _colvenna_sequence
 FROM ranked c LEFT JOIN key_state s USING (order_id)
-WHERE c.version_rank = 1 AND (s.order_id IS NULL OR c.version > s._cove_version
-      OR (c.version = s._cove_version AND c._cove_commit_sequence > s._cove_sequence))
+WHERE c.version_rank = 1 AND (s.order_id IS NULL OR c.version > s._colvenna_version
+      OR (c.version = s._colvenna_version AND c._colvenna_commit_sequence > s._colvenna_sequence))
 """
 FULL = """
 WITH ranked AS (
-  SELECT *, row_number() OVER (PARTITION BY order_id ORDER BY version DESC, _cove_commit_sequence DESC) AS r
+  SELECT *, row_number() OVER (PARTITION BY order_id ORDER BY version DESC, _colvenna_commit_sequence DESC) AS r
   FROM events)
-SELECT order_id, order_date, amount FROM ranked WHERE r = 1 AND _cove_operation <> 'delete'
+SELECT order_id, order_date, amount FROM ranked WHERE r = 1 AND _colvenna_operation <> 'delete'
 """
 DAILY = """SELECT order_date, CAST(sum(amount) AS DECIMAL(38,2)) AS revenue, CAST(count(*) AS BIGINT) AS order_count
 FROM orders GROUP BY order_date"""
@@ -168,10 +168,10 @@ class IncrementalPublications(unittest.TestCase):
             binding = {"dataset": value["dataset"], "release_id": "input_" + digest([job, alias]),
                        "watermark": {"ods_sequence": value["native_version"]["commit_sequence"]},
                        "schema": value["schema"], "files": files, "selection": value["selection"]}
-            binding["manifest_sha256"] = digest({"contract_version": 1, **{name: binding[name] for name in [
+            binding["manifest_sha256"] = digest({"contract_version": 2, **{name: binding[name] for name in [
                 "dataset", "release_id", "watermark", "schema", "files"]}})
             inputs[alias] = binding
-        descriptor = {"contract_version": 1, "space_id": "owned", "generation": "gen_owned",
+        descriptor = {"contract_version": 2, "space_id": "owned", "generation": "gen_owned",
             "pipeline_id": "demo", "pipeline_version": "v1", "definition_epoch": DEFINITION_EPOCH,
             "snapshot_sha256": "f" * 64, "run_id": "run_" + job, "job_id": job, "attempt_id": "attempt_1",
             "task": task, "package": {"s3_uri":
@@ -222,7 +222,7 @@ class IncrementalPublications(unittest.TestCase):
         return sorted(self.sql(exported, FULL))
 
     def actual(self, release):
-        table = "warehouse._cove_data.\"" + release["physical"]["table"] + "\""
+        table = "warehouse._colvenna_data.\"" + release["physical"]["table"] + "\""
         return sorted(self.reader.execute("SELECT * FROM " + table).fetchall())
 
     def test_multi_batch_incremental_equals_same_watermark_full_with_late_delete_and_restore(self):
@@ -248,7 +248,7 @@ class IncrementalPublications(unittest.TestCase):
         fourth = self.clean("job_4")
         self.assertEqual(self.actual(fourth), self.expected_full(fourth))
         self.assertIn((2, date(2026, 10, 1), Decimal("21.00")), self.actual(fourth))
-        state = self.reader.execute("SELECT * FROM warehouse._cove_data.\"" + fourth["state"]["physical"]["table"]
+        state = self.reader.execute("SELECT * FROM warehouse._colvenna_data.\"" + fourth["state"]["physical"]["table"]
                                     + "\" ORDER BY order_id").fetchall()
         self.assertEqual(state, [(1, 3, 4, False), (2, 4, 11, False), (3, 1, 1, False)])
         # Empty delta preserves the complete target; watermark still advances.
@@ -425,9 +425,9 @@ class IncrementalPublications(unittest.TestCase):
         self.assertEqual(changes["native_version"]["from_sequence"], 1)
         self.assertEqual(changes["native_version"]["to_sequence"], 2)
         self.assertEqual([column["name"] for column in changes["schema"]][-2:],
-                         ["_cove_operation", "_cove_commit_sequence"])
+                         ["_colvenna_operation", "_colvenna_commit_sequence"])
         table = pq.read_table(changes["file"]["local_path"]).to_pylist()
-        self.assertEqual([(row["order_id"], row["_cove_commit_sequence"], row["_cove_operation"]) for row in table],
+        self.assertEqual([(row["order_id"], row["_colvenna_commit_sequence"], row["_colvenna_operation"]) for row in table],
                          [(2, 2, "upsert")])
         with self.assertRaisesRegex(ControlError, "INPUT_WATERMARK_NOT_COMMITTED"):
             self.export({"events": {"dataset": "ods.orders", "selection": {"mode": "snapshot"}, "to_sequence": 99}})

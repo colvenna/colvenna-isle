@@ -10,7 +10,7 @@ from pathlib import Path
 
 import duckdb
 
-from cove_duckdb.region import region
+from colvenna_isle.region import region
 
 
 def connect(args):

@@ -8,10 +8,10 @@ import unittest
 
 from botocore.exceptions import ClientError, ReadTimeoutError
 
-from cove_duckdb.contracts.validation import ContractError, validate
-from cove_duckdb.control.registry import ControlError, Principal, canonical
-from cove_duckdb.intake.handler import handle
-from cove_duckdb.intake.service import Intake, IntakeError
+from colvenna_isle.contracts.validation import ContractError, validate
+from colvenna_isle.control.registry import ControlError, Principal, canonical
+from colvenna_isle.intake.handler import handle
+from colvenna_isle.intake.service import Intake, IntakeError
 
 
 SPACE, GENERATION = "test_space", "gen_" + "a" * 32

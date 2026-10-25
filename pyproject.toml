@@ -18,12 +18,12 @@ aws = ["boto3==1.42.89"]
 Repository = "https://github.com/colvenna/colvenna-isle"
 
 [tool.setuptools.dynamic]
-version = {attr = "cove_duckdb._version.__version__"}
+version = {attr = "colvenna_isle._version.__version__"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-"cove_duckdb.contracts" = ["v1/*.json"]
+"colvenna_isle.contracts" = ["v2/*.json"]
 
-"cove_duckdb.control" = ["data/*.json"]
+"colvenna_isle.control" = ["data/*.json"]

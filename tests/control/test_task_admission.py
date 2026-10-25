@@ -7,10 +7,10 @@ from unittest.mock import patch
 
 import test_pipelines
 
-from cove_duckdb.contracts.validation import ContractError
-from cove_duckdb.control.registry import ControlError, Principal
-from cove_duckdb.pipeline.task_descriptor import TaskAdmission
-from cove_duckdb.pipeline.task_objects import TaskObjects
+from colvenna_isle.contracts.validation import ContractError
+from colvenna_isle.control.registry import ControlError, Principal
+from colvenna_isle.pipeline.task_descriptor import TaskAdmission
+from colvenna_isle.pipeline.task_objects import TaskObjects
 
 
 class TaskAdmissionTests(unittest.TestCase):
@@ -26,7 +26,7 @@ class TaskAdmissionTests(unittest.TestCase):
             "manifest": {"space_id": "space_one", "generation": self.runner.generation,
                 "export_id": "input_original", "inputs": {"source": {
                     "selection": {"mode": "snapshot"},
-                    "manifest": {"contract_version": 1, "dataset": "ods.source", "release_id": "input_original",
+                    "manifest": {"contract_version": 2, "dataset": "ods.source", "release_id": "input_original",
                         "schema": [{"name": "id", "type": "BIGINT", "nullable": False}],
                         "watermark": {"ods_sequence": 1}, "files": [{
                             "s3_uri": f"s3://test-bucket/spaces/space_one/inputs/{self.runner.generation}/"

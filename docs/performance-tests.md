@@ -55,7 +55,7 @@
   - 积压与停止负载后的排空时间；
   - 写者进程 RSS；
   - 产品成本报告。
-- 分段：用 `COVE_TIMING` 行按 `write_id`、`ingestion_id`、`query_id` 关联到客户端样本。
+- 分段：用 `COLVENNA_TIMING` 行按 `write_id`、`ingestion_id`、`query_id` 关联到客户端样本。
   - 写者调度等待、事务单元、业务 SQL、原生 COMMIT 等分段各自报告；
   - 父区间中无法归因的部分记为 `unattributed`。
 
@@ -92,6 +92,6 @@
 
 格式可参考[性能与容量基线](performance.md)。
 
-测量用的负载驱动程序不随仓库发布。产品自带的分段计时（`COVE_TIMING`）和成本报告提供服务端数据，客户端按本说明的矩阵与统计方法记录样本。
+测量用的负载驱动程序不随仓库发布。产品自带的分段计时（`COLVENNA_TIMING`）和成本报告提供服务端数据，客户端按本说明的矩阵与统计方法记录样本。
 
 DuckDB is a trademark of the DuckDB Foundation. Colvenna Isle is independent of the DuckDB Foundation and is not endorsed by it.

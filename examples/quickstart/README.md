@@ -7,8 +7,8 @@
 1. 运维为新空间开通并签发首个管理员 Key（只能签发一次）：
 
    ```bash
-   COVE_ENVIRONMENT=<env> scripts/aws/control.py provision --space <space> --output <dir>
-   COVE_ENVIRONMENT=<env> scripts/aws/control.py bootstrap-key --space <space> \
+   COLVENNA_ENVIRONMENT=<env> scripts/aws/control.py provision --space <space> --output <dir>
+   COLVENNA_ENVIRONMENT=<env> scripts/aws/control.py bootstrap-key --space <space> \
      --expires-at 2026-12-31T00:00:00Z --token-output <private-file> --output <dir>
    ```
 

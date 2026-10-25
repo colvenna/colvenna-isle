@@ -4,7 +4,7 @@ import importlib.util
 import unittest
 from pathlib import Path
 
-from cove_duckdb.contracts.model import ROUTES
+from colvenna_isle.contracts.model import ROUTES
 
 ROOT = Path(__file__).resolve().parents[2]
 SPEC = importlib.util.spec_from_file_location("query_infrastructure", ROOT / "infra/template.py")
@@ -33,7 +33,7 @@ class QueryDeployment(unittest.TestCase):
         for field, header in [("principal_id", "principal-id"), ("key_id", "key-id"),
                               ("spaces", "spaces"), ("scopes", "scopes"),
                               ("generation", "generation"), ("expires_at", "expires-at")]:
-            self.assertEqual(mapping["overwrite:header.x-cove-" + header], "$context.authorizer." + field)
+            self.assertEqual(mapping["overwrite:header.x-colvenna-" + header], "$context.authorizer." + field)
         self.assertEqual(self.resources["ApiAuthorizer"]["Properties"]["AuthorizerResultTtlInSeconds"], 0)
 
     def test_query_role_cannot_write_database_or_control_authority(self):

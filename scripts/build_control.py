@@ -36,18 +36,23 @@ def main():
                "-r", str(ROOT / "runtime/aws-requirements.lock")]
     with (output / "install.log").open("x") as stream:
         subprocess.run(command, check=True, stdout=stream, stderr=subprocess.STDOUT)
-    shutil.copytree(ROOT / "src/cove_duckdb", package / "cove_duckdb", ignore=shutil.ignore_patterns("__pycache__"))
+    # Dependency CLI scripts bind to the build host's interpreter. Services
+    # import these packages as modules, so those host-specific entrypoints
+    # do not belong in the Lambda ZIP or the writer/query application.
+    if (package / "bin").exists():
+        shutil.rmtree(package / "bin")
+    shutil.copytree(ROOT / "src/colvenna_isle", package / "colvenna_isle", ignore=shutil.ignore_patterns("__pycache__"))
     sources = {str(path.relative_to(ROOT)): hashlib.sha256(path.read_bytes()).hexdigest()
-               for path in sorted((ROOT / "src/cove_duckdb").rglob("*"))
+               for path in sorted((ROOT / "src/colvenna_isle").rglob("*"))
                if path.is_file() and "__pycache__" not in path.parts}
-    (package / "cove-source.json").write_text(json.dumps({
+    (package / "colvenna-source.json").write_text(json.dumps({
         "source_commit": head, "source_tree": tree, "sources": sources}, sort_keys=True) + "\n")
     # Suites run without per-request timing lines (timing tests enable it themselves), against the AWS
     # documentation example account.
-    env = dict(os.environ, PYTHONPATH=str(package), COVE_TIMING="off", COVE_ACCOUNT="123456789012",
-               COVE_REGION=FIXTURE_REGION, AWS_REGION=FIXTURE_REGION, AWS_DEFAULT_REGION=FIXTURE_REGION)
+    env = dict(os.environ, PYTHONPATH=str(package), COLVENNA_TIMING="off", COLVENNA_ACCOUNT="123456789012",
+               COLVENNA_REGION=FIXTURE_REGION, AWS_REGION=FIXTURE_REGION, AWS_DEFAULT_REGION=FIXTURE_REGION)
     checks = [
-        [sys.executable, "-m", "cove_duckdb.contracts", "generate", "--check"],
+        [sys.executable, "-m", "colvenna_isle.contracts", "generate", "--check"],
         [sys.executable, "-m", "unittest", "discover", "-s", str(ROOT / "tests/control"), "-v"],
         [sys.executable, "-m", "unittest", "discover", "-s", str(ROOT / "tests/intake"), "-v"],
         [sys.executable, "-m", "unittest", "discover", "-s", str(ROOT / "tests/writer"), "-v"],

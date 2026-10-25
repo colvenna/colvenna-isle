@@ -5,7 +5,7 @@ import threading
 import unittest
 
 import test_consumer as fixture_module
-from cove_duckdb.writer.dlq import DeadLetters
+from colvenna_isle.writer.dlq import DeadLetters
 
 
 class ReconciliationTests(unittest.TestCase):

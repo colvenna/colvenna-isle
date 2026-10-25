@@ -21,7 +21,7 @@ sys.path[:0] = [str(ROOT), str(ROOT / "src"), str(Path(__file__).parent)]
 from infra.template import template
 from manage import STACKS, encode, outputs, owned_stack, session, source, template_arguments, update_stack, wait
 from control import stopped
-from cove_duckdb.writer.controller import Controller
+from colvenna_isle.writer.controller import Controller
 
 SOURCES = ["SourceCommit", "AuthSourceCommit", "IntakeSourceCommit", "WriterSourceCommit", "SyncSourceCommit",
            "QuerySourceCommit", "BrowserSourceCommit"]
@@ -45,7 +45,7 @@ def flags(current, baseline, head, directory, enabled=None, timing=None):
     body = json.dumps(definition, separators=(",", ":"))
     cf = current.client("cloudformation")
     (directory / "template.json").write_text(body + "\n")
-    token = "cove-admission-" + uuid.uuid4().hex
+    token = "colvenna-admission-" + uuid.uuid4().hex
     (directory / "admission.json").write_text(encode({
         "stack_id": baseline["StackId"], "source_commit": head, "enabled": enabled, "timing": timing,
         "client_request_token": token,

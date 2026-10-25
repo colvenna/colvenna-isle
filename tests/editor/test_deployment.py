@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 
 # The operator tools name their stacks from an explicit environment.
-os.environ.setdefault("COVE_ENVIRONMENT", "qa")
+os.environ.setdefault("COLVENNA_ENVIRONMENT", "qa")
 
 ROOT = Path(__file__).resolve().parents[2]
 

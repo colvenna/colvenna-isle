@@ -22,12 +22,12 @@ Colvenna Isle is a database and analytics product for AWS. Applications write th
 
 ## Release 1.1.0
 
-The next release adopts the Colvenna Isle name; `main` is `1.2.0.dev0` (unreleased). Branding checks do not establish AWS acceptance for this candidate. See the [rename and upgrade notes](docs/release-notes.md#120-unreleased).
+The next release completes the Colvenna identifiers across code, configuration, protocols and data; `main` is `2.0.0.dev0` (unreleased). This is a breaking upgrade: see the [migration design](docs/design/identifier-migration.md). Candidate AWS acceptance is recorded for each exact source commit and artifact digest in [PR #23](https://github.com/colvenna/colvenna-isle/pull/23).
 
-Published version 1.1.0 ([GitHub Release `v1.1.0`](https://github.com/colvenna/colvenna-isle/releases/tag/v1.1.0)) covers the current contract and capabilities, accepted on AWS:
+Published version 1.1.0 ([GitHub Release `v1.1.0`](https://github.com/colvenna/colvenna-isle/releases/tag/v1.1.0)) provides the historical 1.x interfaces and capabilities accepted on AWS:
 
 - a single AWS account of your choice (the account ID is taken from the deployment, never from the source), ARM64;
-- a standard commercial AWS region chosen at installation (`--region` / `COVE_REGION`): `us-east-2` passed fresh installation, all 56 functional UAT cases, backup and isolated restore, upgrade, interrupted redeploy and uninstall; `us-west-2` passed regression; other commercial regions are accepted by configuration but not qualified;
+- a standard commercial AWS region chosen at installation (`--region`): `us-east-2` passed fresh installation, all 56 functional UAT cases, backup and isolated restore, upgrade, interrupted redeploy and uninstall; `us-west-2` passed regression; other commercial regions are accepted by configuration but not qualified;
 - DuckDB 1.5.6 on the S3 object filesystem;
 - the writer and query services at 2 vCPU / 4 GiB.
 
@@ -46,7 +46,7 @@ Published version 1.1.0 ([GitHub Release `v1.1.0`](https://github.com/colvenna/c
 
 ## Get started
 
-1. From a clean checkout of tag `v1.1.0`, run `./install.sh fresh --environment <name> --account <account-id> --region <region>`. It checks the deployment host (an ARM64 EC2 instance with an instance role, Python 3.12, Docker for `linux/arm64`, Node.js), builds the release and installs it as a new environment. See the [installation guide](docs/installation.md).
+1. For the current candidate, use a clean checkout of the reviewed commit and run `./install.sh fresh --environment <name> --account <account-id> --region <region>`. It checks the deployment host (an ARM64 EC2 instance with an instance role, Python 3.12, Docker for `linux/arm64`, Node.js), builds the release and installs it as a new environment. See the [installation guide](docs/installation.md).
 2. Provision a space and its first administrator key, then run the [quickstart](examples/quickstart/README.md). It covers API ingestion, a synchronous table write with `after_write` read-back, and a published SQL + pandas pipeline queried through SQL.
 3. Continue with the [user guide](docs/user-guide.md) and the [API contract](docs/design/api-contract.md).
 

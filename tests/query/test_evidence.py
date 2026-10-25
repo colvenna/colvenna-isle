@@ -7,7 +7,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-from cove_duckdb.query.evidence import response_record
+from colvenna_isle.query.evidence import response_record
 
 
 class Gateway(BaseHTTPRequestHandler):

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import duckdb
 
-from cove_duckdb.writer.database import native_uri
+from colvenna_isle.writer.database import native_uri
 
 
 class NativeRoots(unittest.TestCase):
@@ -19,7 +19,7 @@ class NativeRoots(unittest.TestCase):
                     "autoload_known_extensions": False, "autoinstall_known_extensions": False})
                 connections.append(c)
                 for extension in ["httpfs", "aws", "duckdb_object_storage"]:
-                    c.execute("LOAD '/opt/cove/artifacts/" + extension + ".duckdb_extension'")
+                    c.execute("LOAD '/opt/colvenna/artifacts/" + extension + ".duckdb_extension'")
                 c.execute("SET duckdb_objfs_backend='local'")
                 c.execute("SET duckdb_objfs_root=?", [str(Path(folder) / name)])
                 configuration = {"database_uri": "s3://test-bucket/spaces/" + name + "/gen_fixed/warehouse"}

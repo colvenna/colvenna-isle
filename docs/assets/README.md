@@ -33,7 +33,7 @@ Keep the original proportions and leave at least one eighth of the icon's width 
 
 On 2026-10-24, the [DuckDB trademark guidelines](https://duckdb.org/trademark_guidelines) were checked directly. They prohibit DuckDB or Duck as a product brand, modified or look-alike duck logos, and use of the marks in dashboards, menus and developer consoles without written approval. Domains containing duckdb require permission; promotional use has additional restrictions.
 
-The requester chose **Colvenna Isle** without seeking Foundation approval ([Issue #19](https://github.com/colvenna/colvenna-isle/issues/19)). The name, subtitle, logos, consoles, press release and promotion use the independent brand. Technical documentation may factually describe its engine and includes attribution. No product domain containing duckdb is used. The internal `cove_duckdb` module, configuration and protocol names remain for this release, as permitted by the issue.
+The requester chose **Colvenna Isle** without seeking Foundation approval ([Issue #19](https://github.com/colvenna/colvenna-isle/issues/19)). The name, subtitle, logos, consoles, press release and promotion use the independent brand. Technical documentation may factually describe its engine and includes attribution. No product domain containing duckdb is used. The 2.0.0 candidate also adopts Colvenna module, configuration, protocol and system-column names; see the [migration design](../design/identifier-migration.md).
 
 DuckDB is a trademark of the DuckDB Foundation. Colvenna Isle is independent of the DuckDB Foundation and is not endorsed by it.
 

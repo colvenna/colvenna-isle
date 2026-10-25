@@ -81,7 +81,7 @@ def main():
     ).strip()
     if tag != lock["duckdb"]["source_commit"]:
         raise RuntimeError("Release tag does not name the locked DuckDB commit")
-    build = upstream / "build/cove"
+    build = upstream / "build/colvenna"
     run(
         "cmake", "-S", str(upstream / "duckdb"), "-B", str(build), "-G", "Ninja",
         "-DCMAKE_BUILD_TYPE=Release", "-DDUCKDB_EXTENSION_CONFIGS=" + str(upstream / "extension_config.cmake"),
@@ -124,7 +124,7 @@ def main():
     for file in list(artifacts.glob("*.duckdb_extension")) + [wheel, artifacts / "manifest.json"]:
         shutil.copy2(file, context / "artifacts" / file.name)
     shutil.copy2(ROOT / "scripts/storage/worker.py", context / "scripts/storage/worker.py")
-    shutil.copy2(ROOT / "src/cove_duckdb/region.py", context / "scripts/storage/region.py")
+    shutil.copy2(ROOT / "src/colvenna_isle/region.py", context / "scripts/storage/region.py")
     shutil.copy2(ROOT / "runtime/Dockerfile.storage", context / "Dockerfile")
     run("docker", "build", "--build-arg", "RUNTIME_BASE=" + lock["runtime_base"],
         "--label", "org.opencontainers.image.source=" + source["source_repository"],
@@ -134,10 +134,10 @@ def main():
     manifest["image"] = {"reference": args.image, "id": image["Id"], "architecture": image["Architecture"],
                          "base": lock["runtime_base"], "user": image["Config"]["User"]}
     manifest["worker_sha256"] = sha256(ROOT / "scripts/storage/worker.py")
-    manifest["cove_sources"] = {
+    manifest["colvenna_sources"] = {
         name: sha256(ROOT / name) for name in
         ["runtime/storage-lock.json", "runtime/Dockerfile.storage", "scripts/storage/prepare_runtime.py",
-         "scripts/storage/worker.py", "src/cove_duckdb/region.py"]
+         "scripts/storage/worker.py", "src/colvenna_isle/region.py"]
     }
     (workspace / "build-receipt.json").write_text(json.dumps(manifest, indent=2) + "\n")
     print(json.dumps(manifest, indent=2))

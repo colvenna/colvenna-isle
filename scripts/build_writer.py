@@ -27,6 +27,7 @@ def main():
     parser.add_argument("--bundle", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--service", choices=["writer", "query"], default="writer")
+    parser.add_argument("--storage-image", help="local image reference; must match the locked immutable image ID")
     args = parser.parse_args()
     output = args.output.resolve()
     if output.exists() or output == ROOT or ROOT in output.parents:
@@ -40,13 +41,13 @@ def main():
             or hashlib.sha256(archive.read_bytes()).hexdigest() != manifest["zip_sha256"]):
         raise RuntimeError("Application ZIP/source mismatch")
     lock = json.loads((ROOT / "runtime/writer-lock.json").read_text())
-    account = os.environ.get("COVE_ACCOUNT", "")
+    account = os.environ.get("COLVENNA_ACCOUNT", "")
     if not re.fullmatch(r"[0-9]{12}", account):
-        parser.error("set COVE_ACCOUNT: the native storage image is pulled from that account's ECR")
-    from cove_duckdb.region import region
+        parser.error("set COLVENNA_ACCOUNT: the native storage image is pulled from that account's ECR")
+    from colvenna_isle.region import region
 
-    storage = (f"{account}.dkr.ecr.{region()}.amazonaws.com/{lock['storage_repository']}"
-               f"@{lock['storage_digest']}")
+    storage = args.storage_image or (f"{account}.dkr.ecr.{region()}.amazonaws.com/{lock['storage_repository']}"
+                                    f"@{lock['storage_digest']}")
     base = json.loads(run(["docker", "image", "inspect", storage]))[0]
     if base["Id"] != lock["storage_digest"] or base["Architecture"] != "arm64":
         raise RuntimeError("Native base identity mismatch")
@@ -75,14 +76,14 @@ def main():
     module = "writer.runtime" if args.service == "writer" else "query.runtime"
     code = (
         "import hashlib,json,pathlib,duckdb,boto3; "
-        "p=pathlib.Path('/opt/cove/artifacts'); m=json.loads((p/'manifest.json').read_text()); "
+        "p=pathlib.Path('/opt/colvenna/artifacts'); m=json.loads((p/'manifest.json').read_text()); "
         "assert duckdb.__version__==m['duckdb_version']; "
         "assert all(hashlib.sha256((p/n).read_bytes()).hexdigest()==h for n,h in m['files'].items()); "
         "c=duckdb.connect(config={'allow_unsigned_extensions':True,'autoinstall_known_extensions':False,"
         "'autoload_known_extensions':False}); "
-        "[c.execute(\"LOAD '/opt/cove/artifacts/\"+n+\".duckdb_extension'\") for n in "
+        "[c.execute(\"LOAD '/opt/colvenna/artifacts/\"+n+\".duckdb_extension'\") for n in "
         "['httpfs','aws','duckdb_object_storage']]; "
-        "import cove_duckdb." + module + "; "
+        "import colvenna_isle." + module + "; "
         + "import pyarrow; assert pyarrow.__version__=='24.0.0'; "
         + "print(json.dumps({'native':m,'aws':boto3.__version__"
         + ",'pyarrow':pyarrow.__version__}))")
@@ -91,8 +92,9 @@ def main():
     with (output / "ingestion-tests.log").open("x") as stream:
         subprocess.run(["docker", "run", "--rm", "--network", "none", "--read-only",
             "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--tmpfs", "/tmp:rw,size=128m",
-            "--mount", "type=bind,src=" + str(ROOT / "tests/ingestion") + ",dst=/tests,readonly",
-            "-e", "COVE_TIMING=off", "-e", "COVE_REGION=" + FIXTURE_REGION, "-e", "AWS_REGION=" + FIXTURE_REGION, "-e", "AWS_DEFAULT_REGION=" + FIXTURE_REGION, "-e", "COVE_ACCOUNT=" + FIXTURE_ACCOUNT, "--entrypoint", "python", tag, "-m", "unittest", "discover", "-s", "/tests", "-v"],
+            "--mount", "type=bind,src=" + str(ROOT / "tests/ingestion") + ",dst=/source/tests/ingestion,readonly",
+            "--mount", "type=bind,src=" + str(ROOT / "docs/history") + ",dst=/source/docs/history,readonly",
+            "-e", "COLVENNA_TIMING=off", "-e", "COLVENNA_REGION=" + FIXTURE_REGION, "-e", "AWS_REGION=" + FIXTURE_REGION, "-e", "AWS_DEFAULT_REGION=" + FIXTURE_REGION, "-e", "COLVENNA_ACCOUNT=" + FIXTURE_ACCOUNT, "--entrypoint", "python", tag, "-m", "unittest", "discover", "-s", "/source/tests/ingestion", "-v"],
             check=True, stdout=stream, stderr=subprocess.STDOUT)
     # Socket and SQL checks use the actual hardened image without AWS. Keep
     # native-engine tests separate from the Lambda ZIP's transport checks.
@@ -106,8 +108,8 @@ def main():
                     "--mount", "type=bind,src=" + str(ROOT / "tests/query") + ",dst=/query-fixtures,readonly",
                     "--mount", "type=bind,src=" + str(ROOT / "tests/ingestion") + ",dst=/ingestion-fixtures,readonly",
                     "--mount", "type=bind,src=" + str(ROOT / "infra") + ",dst=/source/infra,readonly",
-                    "-e", "PYTHONPATH=/query-fixtures:/ingestion-fixtures:/opt/cove/application",
-                    "-e", "COVE_TIMING=off", "-e", "COVE_REGION=" + FIXTURE_REGION, "-e", "AWS_REGION=" + FIXTURE_REGION, "-e", "AWS_DEFAULT_REGION=" + FIXTURE_REGION, "-e", "COVE_ACCOUNT=" + FIXTURE_ACCOUNT, "--entrypoint", "python", tag, "-m", "unittest", "discover", "-s", target, "-v"],
+                    "-e", "PYTHONPATH=/query-fixtures:/ingestion-fixtures:/opt/colvenna/application",
+                    "-e", "COLVENNA_TIMING=off", "-e", "COLVENNA_REGION=" + FIXTURE_REGION, "-e", "AWS_REGION=" + FIXTURE_REGION, "-e", "AWS_DEFAULT_REGION=" + FIXTURE_REGION, "-e", "COLVENNA_ACCOUNT=" + FIXTURE_ACCOUNT, "--entrypoint", "python", tag, "-m", "unittest", "discover", "-s", target, "-v"],
                     check=True, stdout=stream, stderr=subprocess.STDOUT)
     else:
         with (output / "pipeline-tests.log").open("x") as stream:
@@ -123,7 +125,7 @@ def main():
                     "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--tmpfs", "/tmp:rw,size=128m",
                     "--mount", "type=bind,src=" + str(ROOT / "tests/pipeline") +
                         ",dst=/source/tests/pipeline,readonly",
-                    "-e", "COVE_TIMING=off", "-e", "COVE_REGION=" + FIXTURE_REGION, "-e", "AWS_REGION=" + FIXTURE_REGION, "-e", "AWS_DEFAULT_REGION=" + FIXTURE_REGION, "-e", "COVE_ACCOUNT=" + FIXTURE_ACCOUNT, "--entrypoint", "python", tag, "-m", "unittest", "discover",
+                    "-e", "COLVENNA_TIMING=off", "-e", "COLVENNA_REGION=" + FIXTURE_REGION, "-e", "AWS_REGION=" + FIXTURE_REGION, "-e", "AWS_DEFAULT_REGION=" + FIXTURE_REGION, "-e", "COLVENNA_ACCOUNT=" + FIXTURE_ACCOUNT, "--entrypoint", "python", tag, "-m", "unittest", "discover",
                     "-s", "/source/tests/pipeline", "-p", pattern, "-v"],
                     check=True, stdout=stream, stderr=subprocess.STDOUT)
     receipt = {"status": "PASS", "service": args.service,

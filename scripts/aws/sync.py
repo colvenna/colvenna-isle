@@ -82,7 +82,7 @@ def main():
     body = json.dumps(definition, separators=(",", ":"))
     (directory / "template.json").write_text(body + "\n")
     save("validation", cf.validate_template(**template_arguments(current, body)))
-    token = "cove-sync-" + uuid.uuid4().hex
+    token = "colvenna-sync-" + uuid.uuid4().hex
     save("deployment-admission", {
         "stack_id": baseline["StackId"], "source_commit": head, "artifact": binding,
         "client_request_token": token, "parameters": parameters,

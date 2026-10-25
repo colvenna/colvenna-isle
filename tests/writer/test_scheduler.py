@@ -2,7 +2,7 @@ import threading
 import unittest
 from concurrent.futures import TimeoutError
 
-from cove_duckdb.writer.scheduler import NotSubmitted, Scheduler
+from colvenna_isle.writer.scheduler import NotSubmitted, Scheduler
 
 
 class SchedulingTests(unittest.TestCase):

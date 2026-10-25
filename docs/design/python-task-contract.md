@@ -1,10 +1,10 @@
 # Python 任务的输入、输出与执行合同
 
-合同版本：1。适用版本：1.1.0。Python 适配器负责固定描述、独立执行和 staging，唯一写者负责原生导入与发布；完整流水线中的 pandas 任务按本合同运行。[pandas 示例](../../examples/orders/python/score_orders.py) 可在本地运行。
+合同版本：2。适用版本：2.0.0 候选；本文使用当前标识与契约；历史 1.1.0 的 AWS 验收不代表候选通过，候选验证范围见 [PR #23](https://github.com/colvenna/colvenna-isle/pull/23)。Python 适配器负责固定描述、独立执行和 staging，唯一写者负责原生导入与发布；完整流水线中的 pandas 任务按本合同运行。[pandas 示例](../../examples/orders/python/score_orders.py) 可在本地运行。
 
 固定输入由写者在一个原生读事务内导出：输入按明确水位或 release 绑定为 Parquet 文件、schema、对象版本/hash 和完整清单。持续接入期间，已绑定的输入保持不变，新的运行才看到新水位；写者替换后，原清单仍可读取。执行角色的读写范围见第 6 节。
 
-[机器 JSON Schema](../../src/cove_duckdb/contracts/v1/contracts.schema.json) 与[语义校验器](../../src/cove_duckdb/contracts/validation.py)是当前合同的可执行形状；本地示例使用同一 pipeline/input_manifest/context/output_manifest 校验，但不调用 AWS。
+[机器 JSON Schema](../../src/colvenna_isle/contracts/v2/contracts.schema.json) 与[语义校验器](../../src/colvenna_isle/contracts/validation.py)是当前合同的可执行形状；本地示例使用同一 pipeline/input_manifest/context/output_manifest 校验，但不调用 AWS。
 
 ## 1. Python 到底读什么、写什么
 
@@ -36,7 +36,7 @@ local_files 的输入、输出、包和 spill 必须落在 profile 的临时存�
 
 ```json
 {
-  "contract_version": 1,
+  "contract_version": 2,
   "space_id": "space_123",
   "pipeline_id": "orders",
   "pipeline_version": "v3",
@@ -89,7 +89,7 @@ local_files 的输入、输出、包和 spill 必须落在 profile 的临时存�
 }
 ```
 
-Lambda 的 directory 位于本次 invocation 独立的 `/tmp/cove/<run>/<attempt>/<execution>/…`；ECS 的目录位于其独立 Task 的工作盘。绝对路径会变化，脚本必须读取 context，不能硬编码示例目录。输入路径只用于读取，输出只写声明的目录。
+Lambda 的 directory 位于本次 invocation 独立的 `/tmp/colvenna/<run>/<attempt>/<execution>/…`；ECS 的目录位于其独立 Task 的工作盘。绝对路径会变化，脚本必须读取 context，不能硬编码示例目录。输入路径只用于读取，输出只写声明的目录。
 
 调用形式：
 
@@ -123,7 +123,7 @@ parameters 是定义中声明的 JSON 类型值。Decimal 使用规范字符串�
 
 ```json
 {
-  "contract_version": 1,
+  "contract_version": 2,
   "job_id": "job_123",
   "attempt_id": "attempt_1",
   "execution_id": "exec_1",
@@ -154,7 +154,7 @@ path 是输出目录下的相对文件路径。绝对路径、`..`、指向外�
 
 replace_partitions 输出清单额外携带 `replace_partitions` 数组，值与 context.output.replace_partitions 完全覆盖同一集合。即使某个分区没有文件/没有行，仍列出该分区；不能只通过 files[].partition_values 推断替换范围。merge_keys 的 context 同时保存 target_schema（业务约束）和 schema（允许 DELETE 空非键字段的 wire 形状）。
 
-增量任务的 context 增加固定水位区间和状态 release。merge_keys 使用含 `_cove_op`、业务键及声明 metadata 的 wire schema；UPSERT 校验完整业务行，DELETE 校验键/状态。零行表示无键变化，不表示清空目标。详细输入和更新语义见[增量、分区重算与全量](processing-modes.md)。
+增量任务的 context 增加固定水位区间和状态 release。merge_keys 使用含 `_colvenna_op`、业务键及声明 metadata 的 wire schema；UPSERT 校验完整业务行，DELETE 校验键/状态。零行表示无键变化，不表示清空目标。详细输入和更新语义见[增量、分区重算与全量](processing-modes.md)。
 
 默认一份任务产物只对应一个数据集。大结果按已批准的行数/字节预算写多个 part 文件；重算可按分区拆成多个受控任务。所有输出均受工作盘、文件数和总输出字节配额限制，不能假设 Lambda 的 /tmp 或 Task spill 无限大。
 

@@ -12,7 +12,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 # The operator tools name their stacks from an explicit environment.
-os.environ.setdefault("COVE_ENVIRONMENT", "qa")
+os.environ.setdefault("COLVENNA_ENVIRONMENT", "qa")
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts/aws"))
@@ -69,7 +69,7 @@ class PurgeTests(unittest.TestCase):
     def plan(self, state, generation=OLD):
         Ownership.state = state
         with tempfile.TemporaryDirectory() as directory, contextlib.redirect_stdout(io.StringIO()), \
-                patch("cove_duckdb.writer.ownership.Ownership", Ownership), patch.object(operator, "Registry", Registry):
+                patch("colvenna_isle.writer.ownership.Ownership", Ownership), patch.object(operator, "Registry", Registry):
             operator.purge_generation(Session(Client(state)), {"ControlTable": "control", "DataBucket": "bucket"},
                                       "space_one", generation, False, {"Arn": "arn:operator"}, Path(directory))
             return json.loads((Path(directory) / "plan.json").read_text())

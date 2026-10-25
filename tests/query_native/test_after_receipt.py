@@ -12,12 +12,12 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from botocore.exceptions import ReadTimeoutError
-from cove_duckdb.control.registry import ControlError, Principal
-from cove_duckdb.query.sql import Session
-from cove_duckdb.writer.writes import write_id
-from cove_duckdb.writer.writes import WriteStore
-from cove_duckdb.writer.ingestion import CommitUnknown, IngestionStore, digest
-from cove_duckdb.writer.scheduler import Scheduler
+from colvenna_isle.control.registry import ControlError, Principal
+from colvenna_isle.query.sql import Session
+from colvenna_isle.writer.writes import write_id
+from colvenna_isle.writer.writes import WriteStore
+from colvenna_isle.writer.ingestion import CommitUnknown, IngestionStore, digest
+from colvenna_isle.writer.scheduler import Scheduler
 import test_jobs as queue_fixture
 import test_transactions as ingestion_fixture
 
@@ -74,7 +74,7 @@ class AfterReceipt(unittest.TestCase):
         self.fixture.tearDown()
 
     def test_original_write_reads_later_update_and_delete_instead_of_old_reader(self):
-        from cove_duckdb.query.snapshots import capture, load
+        from colvenna_isle.query.snapshots import capture, load
 
         fixture = self.fixture
         original = write_id("fixture", "gen_fixture", "dwd.orders", "initial_0")
@@ -111,8 +111,8 @@ class AfterReceipt(unittest.TestCase):
             snapshot.close()
 
     def private_source(self):
-        from cove_duckdb.query.jobs import Jobs
-        from cove_duckdb.writer.query_reads import QueryReads
+        from colvenna_isle.query.jobs import Jobs
+        from colvenna_isle.writer.query_reads import QueryReads
 
         storage = queue_fixture.Storage()
         storage.space("fixture")
@@ -151,7 +151,7 @@ class AfterReceipt(unittest.TestCase):
         value = reads.execute(operation)
         snapshot = Session(self.fixture.directory / "private_query")
         try:
-            from cove_duckdb.query.snapshots import load
+            from colvenna_isle.query.snapshots import load
             load(value, configuration, snapshot, lambda: None, ORDERS)
             self.assertEqual(snapshot.execute(request["sql"], 10)["rows"], [["12.30"]])
         finally:
@@ -163,7 +163,7 @@ class AfterReceipt(unittest.TestCase):
                          ["source_read"]["state"], "CLOSED")
 
     def test_lost_private_reply_never_recaptures_or_executes_sql(self):
-        from cove_duckdb.query.controlled import Reader
+        from colvenna_isle.query.controlled import Reader
 
         jobs, reads, operation, configuration, request = self.private_source()
         producer = operation["identity"]
@@ -195,7 +195,7 @@ class AfterReceipt(unittest.TestCase):
             reads.execute(operation)
 
     def test_receipt_owner_and_administrator_need_query_permission(self):
-        from cove_duckdb.query.snapshots import capture
+        from colvenna_isle.query.snapshots import capture
 
         configuration = self.fixture.configuration
         condition = {"consistency": "after_write", "write_id":
@@ -218,7 +218,7 @@ class AfterReceipt(unittest.TestCase):
                 capture(self.fixture.writer, configuration, actor, condition, lambda: None, ORDERS)
 
     def test_unknown_rejected_and_missing_native_ledger_never_satisfy_commit(self):
-        from cove_duckdb.query.snapshots import capture
+        from colvenna_isle.query.snapshots import capture
 
         fixture = self.fixture
         with self.assertRaisesRegex(ControlError, "COMMIT_RECEIPT_UNCONFIRMED"):
@@ -237,7 +237,7 @@ class AfterReceipt(unittest.TestCase):
                  write_id("fixture", "gen_fixture", "dwd.orders", "initial_0")}, lambda: None, ORDERS)
 
     def test_ingestion_uses_native_commit_and_original_owner_or_monitor_administrator(self):
-        from cove_duckdb.query.snapshots import capture, load
+        from colvenna_isle.query.snapshots import capture, load
 
         fixture = self.fixture
         registered = copy.deepcopy(ingestion_fixture.REGISTERED)
@@ -267,8 +267,8 @@ class AfterReceipt(unittest.TestCase):
                                 lambda: None, ["ods.orders"])["snapshot"]["tables"])
 
     def test_exact_bigint_decimal_blob_dates_json_and_arrays_reach_sealed_sql(self):
-        from cove_duckdb.query.snapshots import capture, load
-        from cove_duckdb.writer.ingestion import digest
+        from colvenna_isle.query.snapshots import capture, load
+        from colvenna_isle.writer.ingestion import digest
 
         definition = {"dataset": "dwd.types", "schema_version": 1, "write_owner": "direct",
             "schema": [{"name": name, "type": kind, "nullable": False} for name, kind in [
@@ -298,10 +298,10 @@ class AfterReceipt(unittest.TestCase):
             snapshot.close()
 
     def test_source_quota_rolls_back_and_subsequent_write_is_usable(self):
-        from cove_duckdb.query.snapshots import capture
+        from colvenna_isle.query.snapshots import capture
 
         fixture = self.fixture
-        with patch("cove_duckdb.query.snapshots.MAX_BYTES", 100):
+        with patch("colvenna_isle.query.snapshots.MAX_BYTES", 100):
             with self.assertRaisesRegex(ControlError, "QUERY_SOURCE_QUOTA"):
                 capture(fixture.writer, fixture.configuration, self.actor,
                     {"consistency": "after_write", "write_id":
@@ -310,7 +310,7 @@ class AfterReceipt(unittest.TestCase):
         self.assertEqual(fixture.store.probe("dwd.orders")["rows"], [[1, "7.89"]])
 
     def test_ten_thousand_receipt_rows_load_within_five_seconds(self):
-        from cove_duckdb.query.snapshots import capture, load
+        from colvenna_isle.query.snapshots import capture, load
 
         fixture = self.fixture
         fixture.writer.execute("INSERT INTO warehouse.dwd.orders "
@@ -329,7 +329,7 @@ class AfterReceipt(unittest.TestCase):
             snapshot.close()
 
     def test_byte_quota_rejects_before_any_source_row_is_copied(self):
-        from cove_duckdb.query.snapshots import capture
+        from colvenna_isle.query.snapshots import capture
 
         fixture = self.fixture
         definition = {"dataset": "dwd.large", "schema_version": 1, "write_owner": "direct",
@@ -341,7 +341,7 @@ class AfterReceipt(unittest.TestCase):
         fixture.mutate("dwd.large", "insert", "large", [{"id": 1, "text": "initial"}])
         fixture.writer.execute("UPDATE warehouse.dwd.large SET text=repeat('雪',400000)")
         # _Target.load is the row-copy boundary, after the native preflight.
-        with patch("cove_duckdb.query.snapshots._Target.load",
+        with patch("colvenna_isle.query.snapshots._Target.load",
                    side_effect=AssertionError("oversized source was copied")):
             with self.assertRaisesRegex(ControlError, "QUERY_SOURCE_QUOTA"):
                 capture(fixture.writer, fixture.configuration, self.actor,
@@ -351,7 +351,7 @@ class AfterReceipt(unittest.TestCase):
         fixture.mutate("dwd.orders", "upsert", "after_large", [{"id": 1, "amount": "7.89"}])
 
     def test_hundred_thousand_rows_fit_both_capture_and_load_budgets(self):
-        from cove_duckdb.query.snapshots import capture, load
+        from colvenna_isle.query.snapshots import capture, load
 
         fixture = self.fixture
         fixture.writer.execute("INSERT INTO warehouse.dwd.orders "
@@ -372,7 +372,7 @@ class AfterReceipt(unittest.TestCase):
             snapshot.close()
 
     def test_receipt_version_is_confirmed_when_the_sql_names_none_of_its_rows(self):
-        from cove_duckdb.query.snapshots import capture, load
+        from colvenna_isle.query.snapshots import capture, load
 
         fixture = self.fixture
         condition = {"consistency": "after_write", "write_id":
@@ -406,7 +406,7 @@ class AfterReceipt(unittest.TestCase):
             capture(fixture.writer, fixture.configuration, self.actor, condition, lambda: None, [])
 
     def test_source_quota_is_counted_before_any_row_is_copied(self):
-        from cove_duckdb.query.snapshots import capture
+        from colvenna_isle.query.snapshots import capture
 
         fixture = self.fixture
         fixture.mutate("dwd.orders", "insert", "second", [{"id": 2, "amount": "1.00"}])
@@ -417,7 +417,7 @@ class AfterReceipt(unittest.TestCase):
                 statements.append(sql)
                 return fixture.writer.execute(sql, *args)
 
-        with patch("cove_duckdb.query.snapshots.MAX_ROWS", 1):
+        with patch("colvenna_isle.query.snapshots.MAX_ROWS", 1):
             with self.assertRaisesRegex(ControlError, "QUERY_SOURCE_QUOTA"):
                 capture(Recording(), fixture.configuration, self.actor, {"consistency": "after_write",
                     "write_id": write_id("fixture", "gen_fixture", "dwd.orders", "initial_0")},
@@ -439,7 +439,7 @@ class AfterReceipt(unittest.TestCase):
         self.assertEqual([table["version"]["dataset"] for table in value["snapshot"]["tables"]], ORDERS)
 
     def test_private_success_verifies_capture_custody_before_sql(self):
-        from cove_duckdb.query.controlled import Reader
+        from colvenna_isle.query.controlled import Reader
 
         jobs, reads, operation, configuration, request = self.private_source()
         producer = operation["identity"]
@@ -464,7 +464,7 @@ class AfterReceipt(unittest.TestCase):
             snapshot.close()
 
     def test_writer_switch_after_capture_returns_no_sealed_snapshot(self):
-        from cove_duckdb.query.controlled import Reader
+        from colvenna_isle.query.controlled import Reader
 
         jobs, reads, operation, configuration, request = self.private_source()
         producer = operation["identity"]
@@ -495,7 +495,7 @@ class AfterReceipt(unittest.TestCase):
             reads.execute({**operation, "identity": permit["identity"], "epoch": 2})
 
     def test_cancellation_after_capture_does_not_publish_or_execute_sql(self):
-        from cove_duckdb.query.controlled import Reader
+        from colvenna_isle.query.controlled import Reader
 
         jobs, reads, operation, configuration, request = self.private_source()
         producer = operation["identity"]
@@ -566,8 +566,8 @@ class AfterReceipt(unittest.TestCase):
                 connection.execute("ROLLBACK")
                 raise
 
-        with patch("cove_duckdb.writer.query_reads.CAPTURE_SECONDS", 0.1), \
-                patch("cove_duckdb.writer.query_reads.capture", slow):
+        with patch("colvenna_isle.writer.query_reads.CAPTURE_SECONDS", 0.1), \
+                patch("colvenna_isle.writer.query_reads.capture", slow):
             with self.assertRaisesRegex(ControlError, "QUERY_SOURCE_TIMEOUT"):
                 reads.execute(operation)
         source = jobs.get(self.actor, "fixture", "gen_fixture", operation["query_id"])["source_read"]

@@ -17,15 +17,15 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 from botocore.exceptions import ClientError, ReadTimeoutError
 
-from cove_duckdb.contracts.validation import ContractError
-from cove_duckdb.control.registry import ControlError, canonical
-from cove_duckdb.pipeline.parquet import write
-from cove_duckdb.pipeline.task_adapter import TaskAdapter, ExecutionFailure
-from cove_duckdb.pipeline.task_descriptor import digest
-from cove_duckdb.pipeline.task_objects import TaskObjects
-from cove_duckdb.pipeline.environment_adapter import execute_task
-from cove_duckdb.pipeline.versioned_parquet import input_batches
-from cove_duckdb.pipeline.workspace import Workspace
+from colvenna_isle.contracts.validation import ContractError
+from colvenna_isle.control.registry import ControlError, canonical
+from colvenna_isle.pipeline.parquet import write
+from colvenna_isle.pipeline.task_adapter import TaskAdapter, ExecutionFailure
+from colvenna_isle.pipeline.task_descriptor import digest
+from colvenna_isle.pipeline.task_objects import TaskObjects
+from colvenna_isle.pipeline.environment_adapter import execute_task
+from colvenna_isle.pipeline.versioned_parquet import input_batches
+from colvenna_isle.pipeline.workspace import Workspace
 
 ROOT = Path(__file__).resolve().parents[2]
 PYTHON_PATH = os.pathsep.join(str(Path(path).resolve()) for path in
@@ -38,7 +38,7 @@ from pathlib import Path
 from decimal import Decimal
 import pandas as pd
 import pyarrow.parquet as pq
-from cove_duckdb.pipeline.parquet import write
+from colvenna_isle.pipeline.parquet import write
 p=argparse.ArgumentParser()
 p.add_argument("--context")
 p.add_argument("--output-dir")
@@ -58,7 +58,7 @@ output=Path(a.output_dir)
 file=write(output/"part.parquet", context["output"]["schema"],
            [[[int(row.id), row.amount] for row in frame.itertuples()]],
            maximum_bytes=1048576, maximum_rows=10)
-manifest={{"contract_version":1, **{{name:context[name] for name in ["job_id","attempt_id","execution_id"]}},
+manifest={{"contract_version":2, **{{name:context[name] for name in ["job_id","attempt_id","execution_id"]}},
            "output_name":"result","format":"parquet","schema":context["output"]["schema"],
            "row_count":len(frame),"files":[{{**file,"path":"part.parquet","partition_values":{{}}}}]}}
 {after}
@@ -132,7 +132,7 @@ class PythonAdapter(unittest.TestCase):
         file = write(path, COLUMNS, [[ROW]], maximum_bytes=1048576, maximum_rows=10)
         self.input = {**self.store.seed("spaces/owned/inputs/gen_owned/input_one/exec_one/part.parquet",
                                       path.read_bytes()), "rows": 1}
-        self.descriptor = {"contract_version": 1, "space_id": "owned", "generation": "gen_owned",
+        self.descriptor = {"contract_version": 2, "space_id": "owned", "generation": "gen_owned",
             "pipeline_id": "demo", "pipeline_version": "v1", "definition_epoch": "e" * 64,
             "run_id": "run_one", "job_id": "job_one", "attempt_id": "attempt_one",
             "task": self.task, "environment": {
@@ -154,7 +154,7 @@ class PythonAdapter(unittest.TestCase):
 
     def bind_manifest_hash(self):
         binding = self.descriptor["inputs"]["source"]
-        binding["manifest_sha256"] = digest({"contract_version": 1,
+        binding["manifest_sha256"] = digest({"contract_version": 2,
             **{name: binding[name] for name in ["dataset", "release_id", "watermark", "schema", "files"]}})
 
     def event(self, *, before="pass", after="pass"):
@@ -176,8 +176,8 @@ class PythonAdapter(unittest.TestCase):
         self.descriptor["snapshot_sha256"] = digest(snapshot)
         buffer = io.BytesIO()
         with zipfile.ZipFile(buffer, "w") as archive:
-            for name, raw in [("transform.py", code), (".cove/manifest.json", canonical(snapshot).encode()),
-                              (".cove/definition.json", canonical(definition).encode())]:
+            for name, raw in [("transform.py", code), (".colvenna/manifest.json", canonical(snapshot).encode()),
+                              (".colvenna/definition.json", canonical(definition).encode())]:
                 info = zipfile.ZipInfo(name)
                 info.external_attr = 0o100644 << 16
                 archive.writestr(info, raw)
@@ -327,7 +327,7 @@ class PythonAdapter(unittest.TestCase):
     def test_approved_s3_reader_uses_bound_old_version_and_preserves_decimal(self):
         self.store.seed(self.input["s3_uri"].removeprefix("s3://test-bucket/"), b"wrong latest")
         with patch("boto3.client", return_value=self.store), patch(
-                "cove_duckdb.pipeline.versioned_parquet.Path.read_text",
+                "colvenna_isle.pipeline.versioned_parquet.Path.read_text",
                 return_value=json.dumps(self.environment)):
             batches = list(input_batches(self.input))
         self.assertEqual(batches[0].to_pylist(), [{"id": ROW[0], "amount": ROW[1]}])
@@ -335,9 +335,9 @@ class PythonAdapter(unittest.TestCase):
 
     def test_public_entrypoint_preserves_unknown_original_and_never_reports_success(self):
         self.store.lose_staging = True
-        with patch("cove_duckdb.pipeline.environment_adapter.installed_environment",
+        with patch("colvenna_isle.pipeline.environment_adapter.installed_environment",
                    return_value=self.environment), patch("boto3.client", return_value=self.store), patch(
-                "cove_duckdb.pipeline.task_adapter.TaskAdapter", return_value=self.adapter):
+                "colvenna_isle.pipeline.task_adapter.TaskAdapter", return_value=self.adapter):
             result = execute_task(self.event(), "lambda", remaining_seconds=60)
         self.assertEqual((result["status"], result["code"]), ("UNKNOWN", "TASK_UPLOAD_ORIGINAL_UNKNOWN"))
         self.assertEqual(result["publication_status"], "NOT_PUBLISHED")

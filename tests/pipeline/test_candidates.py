@@ -9,12 +9,12 @@ from types import SimpleNamespace
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from cove_duckdb.control.registry import ControlError, canonical
-from cove_duckdb.pipeline.candidates import Candidates
-from cove_duckdb.pipeline.output_validation import OutputValidator
-from cove_duckdb.pipeline.parquet import write
-from cove_duckdb.pipeline.task_descriptor import context_for
-from cove_duckdb.pipeline.task_objects import TaskObjects
+from colvenna_isle.control.registry import ControlError, canonical
+from colvenna_isle.pipeline.candidates import Candidates
+from colvenna_isle.pipeline.output_validation import OutputValidator
+from colvenna_isle.pipeline.parquet import write
+from colvenna_isle.pipeline.task_descriptor import context_for
+from colvenna_isle.pipeline.task_objects import TaskObjects
 import test_task_adapter as task_fixture
 
 
@@ -33,7 +33,7 @@ class WriterCandidates(unittest.TestCase):
         context["inputs"]["source"]["files"][0]["local_path"] = str(self.fixture.root / "source.parquet")
         file = write(output / "part.parquet", task_fixture.COLUMNS, [[task_fixture.ROW]],
                      maximum_bytes=1048576, maximum_rows=10)
-        manifest = {"contract_version": 1, **{name: context[name] for name in [
+        manifest = {"contract_version": 2, **{name: context[name] for name in [
             "job_id", "attempt_id", "execution_id"]}, "output_name": "result", "format": "parquet",
             "schema": task_fixture.COLUMNS, "row_count": 1,
             "files": [{**file, "path": "part.parquet", "partition_values": {}}]}
@@ -60,7 +60,7 @@ class WriterCandidates(unittest.TestCase):
     def changed_completion(self, change):
         objects = self.verifier.objects
         reference = self.result["completion"]
-        from cove_duckdb.control.http import decode_json
+        from colvenna_isle.control.http import decode_json
 
         value = decode_json(objects.read(reference, "staging", maximum_bytes=1048576))
         change(value)
@@ -88,7 +88,7 @@ class WriterCandidates(unittest.TestCase):
                 self.prepare(self.changed_completion(change))
 
     def test_missing_original_file_fails_even_when_completion_claims_a_complete_valid_output(self):
-        from cove_duckdb.control.http import decode_json
+        from colvenna_isle.control.http import decode_json
 
         completion = decode_json(self.verifier.objects.read(
             self.result["completion"], "staging", maximum_bytes=1048576))
@@ -143,7 +143,7 @@ class WriterCandidates(unittest.TestCase):
     def paired_completion(self):
         objects = self.verifier.objects
         reference = self.result["completion"]
-        from cove_duckdb.control.http import decode_json
+        from colvenna_isle.control.http import decode_json
 
         completion = decode_json(objects.read(reference, "staging", maximum_bytes=1048576))
         schema = copy.deepcopy(task_fixture.COLUMNS) + [{"name": "seen", "type": "BIGINT", "nullable": False}]

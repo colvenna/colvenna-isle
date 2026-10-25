@@ -7,8 +7,8 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
 
-from cove_duckdb.control.registry import ControlError
-from cove_duckdb.query.sql import Session, references
+from colvenna_isle.control.registry import ControlError
+from colvenna_isle.query.sql import Session, references
 
 
 def definition():

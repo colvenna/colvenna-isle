@@ -9,14 +9,14 @@ import time
 import unittest
 from pathlib import Path
 
-from cove_duckdb.control.registry import ControlError
-from cove_duckdb.pipeline.workspace import Workspace
+from colvenna_isle.control.registry import ControlError
+from colvenna_isle.pipeline.workspace import Workspace
 
 
 class ExecutionWorkspace(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
-        self.root = Path(self.temporary.name) / "cove"
+        self.root = Path(self.temporary.name) / "colvenna"
         self.workspace = Workspace(self.root, "run_one", "attempt_one", "exec_one",
                                    maximum_bytes=1048576)
 

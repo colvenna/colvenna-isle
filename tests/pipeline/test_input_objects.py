@@ -9,9 +9,9 @@ from pathlib import Path
 
 from botocore.exceptions import ClientError, ReadTimeoutError
 
-from cove_duckdb.control.registry import ControlError
-from cove_duckdb.pipeline.input_objects import InputObjects, freeze
-from cove_duckdb.pipeline.parquet import write
+from colvenna_isle.control.registry import ControlError
+from colvenna_isle.pipeline.input_objects import InputObjects, freeze
+from colvenna_isle.pipeline.parquet import write
 
 
 class ObjectStore:

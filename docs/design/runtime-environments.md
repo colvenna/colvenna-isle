@@ -1,6 +1,6 @@
 # Python 包依赖与运行环境
 
-适用版本：1.1.0。环境由固定源码的 CodeBuild 构建，通过环境 API 管理，绑定 Lambda 数字版本或 ECS 任务定义 revision；依赖升级生成新的环境版本，不合格的依赖在构建时拒绝。流水线按本文绑定环境运行，使用方式见[用户手册](../user-guide.md)。Lambda Managed Instances 与 Durable Functions profile 尚未实现。
+适用版本：2.0.0 候选；本文使用当前标识与契约；历史 1.1.0 的 AWS 验收不代表候选通过，候选验证范围见 [PR #23](https://github.com/colvenna/colvenna-isle/pull/23)。环境由固定源码的 CodeBuild 构建，通过环境 API 管理，绑定 Lambda 数字版本或 ECS 任务定义 revision；依赖升级生成新的环境版本，不合格的依赖在构建时拒绝。流水线按本文绑定环境运行，使用方式见[用户手册](../user-guide.md)。Lambda Managed Instances 与 Durable Functions profile 尚未实现。
 
 ## 1. 包依赖属于发布版本
 
@@ -47,7 +47,7 @@ READY 只表示该环境构建校验已通过，不证明数据正确性、执�
 
 定义 API 使用 `runtime_environment: {environment_id, version}` 引用同空间的精确 READY 版本，分别检查环境是否就绪、executor/profile 是否匹配以及发布者的 `pipeline:manage` 权限。该对象取代示例中的合并名称字符串；当前合同不保留旧字符串解析。
 
-API 中无法确认的构建观测显示 UNKNOWN，按原 build identity 核对，不据此重放构建或标记 READY。[机器合同](../../src/cove_duckdb/contracts/v1/contracts.schema.json)要求 READY 返回包锁 hash、image digest 及批准的数字函数版本/Task revision；字段校验不能证明资源真实可用。FAILED 构建使用新的环境版本，不覆盖已固定输入。
+API 中无法确认的构建观测显示 UNKNOWN，按原 build identity 核对，不据此重放构建或标记 READY。[机器合同](../../src/colvenna_isle/contracts/v2/contracts.schema.json)要求 READY 返回包锁 hash、image digest 及批准的数字函数版本/Task revision；字段校验不能证明资源真实可用。FAILED 构建使用新的环境版本，不覆盖已固定输入。
 
 发布先确保所有不可变构建产物可读，再更新 DDB 中的环境 READY 记录。流水线发布原子绑定已 READY 的环境及具体执行配置；不在启动作业时才首次解析依赖。
 
@@ -82,8 +82,8 @@ ECS 和 Lambda 的执行角色按空间/流水线批准输入数据集和 stagin
 安装示例依赖：
 
 ```bash
-python3 -m venv /tmp/cove-pipeline-demo-venv
-/tmp/cove-pipeline-demo-venv/bin/python -m pip install --require-hashes -r examples/orders/requirements.lock
+python3 -m venv /tmp/colvenna-pipeline-demo-venv
+/tmp/colvenna-pipeline-demo-venv/bin/python -m pip install --require-hashes -r examples/orders/requirements.lock
 ```
 
 实际包管理 API 和 scopes 见 [API 契约](api-contract.md)，执行合同见 [Python 任务合同](python-task-contract.md)。

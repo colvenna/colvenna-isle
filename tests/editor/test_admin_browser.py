@@ -20,9 +20,9 @@ from urllib.parse import parse_qs, unquote, urlsplit
 
 from playwright.sync_api import expect, sync_playwright
 
-from cove_duckdb.contracts.model import (
+from colvenna_isle.contracts.model import (
     ALTERNATE_SCOPES, AUDIT_ACTIONS, QUERY_PARAMETERS, RETENTION_POLICY, ROUTES, SCOPES)
-from cove_duckdb.contracts.validation import validate
+from colvenna_isle.contracts.validation import validate
 
 ROOT = Path(__file__).resolve().parents[2]
 WEB = ROOT / "infra/web"
@@ -44,7 +44,7 @@ for _method, _suffix, _request, _response, _status, _scope, _conditional in ROUT
 
 DEFINITION = {
     "spec_version": 1, "pipeline_id": "orders", "name": "Orders",
-    "schedule": {"owner": "cove", "expression": "rate(1 hour)", "timezone": "UTC"},
+    "schedule": {"owner": "colvenna", "expression": "rate(1 hour)", "timezone": "UTC"},
     "max_active_runs": 1, "coalesce_pending": True,
     "parameters": {"high_value_threshold": {"type": "decimal_string", "default": "500.00", "minimum": "0"}},
     "tasks": [
@@ -134,16 +134,16 @@ TRIAL_PENDING = {"status": "RUNNING", "tasks": [task("score_orders", "RUNNING", 
 TRIAL_DONE = {"status": "VALIDATED", "finished_at": NOW, "tasks": [task("score_orders", "VALIDATED", "lambda")],
               "validation": {"status": "PASSED", "error_code": None, "row_count": 50, "files": 1, "bytes": 2048,
                              "observed_at": NOW}}
-ARTIFACT = {"s3_uri": "s3://cove-data/spaces/analysis/environments/pandas/lock.txt", "object_version": "v1",
+ARTIFACT = {"s3_uri": "s3://colvenna-data/spaces/analysis/environments/pandas/lock.txt", "object_version": "v1",
             "sha256": "e" * 64, "bytes": 120}
 ENVIRONMENT_READY = {
-    "status": "READY", "build_id": "build_ready", "codebuild_id": "cove-env:1234", "image_digest": "sha256:" + "f" * 64,
+    "status": "READY", "build_id": "build_ready", "codebuild_id": "colvenna-env:1234", "image_digest": "sha256:" + "f" * 64,
     "dependency_lock_sha256": "e" * 64, "dependency_lock": ARTIFACT, "provenance": dict(ARTIFACT, sha256="d" * 64),
     "runtime": {"python_version": "3.12.7", "python_abi": "cp312", "platform": "linux_arm64",
                 "base_image": "public.ecr.aws/lambda/python@sha256:" + "b" * 64, "adapter_sha256": "c" * 64,
                 "source_commit": "a" * 40},
     "executor_bindings": [{"executor": "lambda", "profile": "python_lambda_standard", "lambda_mode": "standard",
-                           "function_arn": "arn:aws:lambda:us-west-2:123456789012:function:cove-env-pandas:3"}]}
+                           "function_arn": "arn:aws:lambda:us-west-2:123456789012:function:colvenna-env-pandas:3"}]}
 FAILURE = {"phase": "BUILD", "aws_status": "FAILED", "code": "DEPENDENCY_RESOLUTION_FAILED",
            "message": "pip: <b>no matching distribution</b> for duckdb==99"}
 
@@ -303,7 +303,7 @@ class Fixture:
 
     def status(self, call):
         writer = observation("OK", "2026-10-18T01:59:57Z", 2.5, "WRITER_HEARTBEAT", {
-            "permit_state": "ACTIVE", "epoch": 7, "task_arn": "arn:aws:ecs:us-west-2:123456789012:task/cove/abc",
+            "permit_state": "ACTIVE", "epoch": 7, "task_arn": "arn:aws:ecs:us-west-2:123456789012:task/colvenna/abc",
             "heartbeat_age_seconds": 2.5, "last_commit_sequence": None})
         if self.writer_state == "STOPPED":
             writer = observation("STOPPED", "2026-10-18T01:30:00Z", 1800, "WRITER_PERMIT",
@@ -341,7 +341,7 @@ class Fixture:
 
     def issue(self, body, replaces=None):
         identity = "key_" + uuid.uuid4().hex[:16]
-        token = "cove_token_" + uuid.uuid4().hex + uuid.uuid4().hex
+        token = "colvenna_token_" + uuid.uuid4().hex + uuid.uuid4().hex
         self.tokens.append(token)
         value = {"key_id": identity, "name": body["name"], "fingerprint": identity[-12:], "scopes": sorted(body["scopes"]),
                  "created_at": NOW, "expires_at": body["expires_at"], "status": "ACTIVE", "last_used_at": None,
@@ -647,7 +647,7 @@ class Fixture:
             build = "build_" + sha(nonce)[:20]
             record.update(nonce=nonce, cursor=0, script=[
                 {"status": "RESOLVING", "build_id": build},
-                {"status": "FAILED", "build_id": build, "codebuild_id": "cove-env:" + build, "failure": FAILURE}])
+                {"status": "FAILED", "build_id": build, "codebuild_id": "colvenna-env:" + build, "failure": FAILURE}])
         return 202, {"build_id": record["script"][0]["build_id"], "status": "QUEUED"}
 
     # -- audit and trace ------------------------------------------------------------------------
@@ -673,13 +673,13 @@ class Fixture:
                 {"kind": "job", "id": "job_clean", "status": "PUBLISHED", "authority": "NATIVE_LEDGER", "observed_at": NOW,
                  "attributes": {"task_id": "clean_orders"}, "links": [{"kind": "release", "id": "release_fixture"}],
                  "conflict": {"projection": "RUNNING", "authority": "PUBLISHED"}},
-                {"kind": "object", "id": "s3://cove-data/spaces/analysis/descriptor.json", "status": "UNKNOWN",
+                {"kind": "object", "id": "s3://colvenna-data/spaces/analysis/descriptor.json", "status": "UNKNOWN",
                  "authority": "UNAVAILABLE", "observed_at": None, "attributes": {"reason": "S3_UNAVAILABLE"},
                  "links": []}]
         elif kind == "release":
             nodes = [{"kind": "release", "id": identity, "status": "PUBLISHED", "authority": "NATIVE_LEDGER",
                       "observed_at": NOW, "attributes": {"pipeline_id": "orders", "dataset": "dwd.orders"},
-                      "links": [{"kind": "run", "id": "run_trace"}, {"kind": "completion", "id": "s3://cove-data/x"}]}]
+                      "links": [{"kind": "run", "id": "run_trace"}, {"kind": "completion", "id": "s3://colvenna-data/x"}]}]
         elif kind == "query":
             nodes = [{"kind": "query", "id": identity, "status": "SUCCEEDED", "authority": "QUERY_RECORD",
                       "observed_at": NOW, "attributes": {"sql_visibility": "AUDIT_READ", "sql": "SELECT '<b>x</b>' AS html",
@@ -736,7 +736,7 @@ class Fixture:
             done = {"status": "COMPLETED", "started_at": NOW, "finished_at": NOW,
                     "summary": {"releases": {"candidates": 3, "collected": 0, "retained": 3, "bytes": 0},
                                 "uploads": {"candidates": 2, "collected": 0, "retained": 0, "bytes": 4096}},
-                    "receipt": {"s3_uri": "s3://cove-data/spaces/analysis/retention/receipt.json",
+                    "receipt": {"s3_uri": "s3://colvenna-data/spaces/analysis/retention/receipt.json",
                                 "object_version": "receipt_v1", "sha256": "7" * 64, "bytes": 512},
                     "objects": [{"category": "uploads", "key": "spaces/analysis/uploads/a", "version_id": "v1",
                                  "bytes": 4096, "action": "WOULD_COLLECT", "reason": "UNBOUND_UPLOAD_EXPIRED"}],
@@ -1177,14 +1177,14 @@ class AdminBrowser(unittest.TestCase):
         self.page.click("#schedule-save")
         expect(self.page.locator("#pipeline-summary .status-badge")).to_have_attribute("data-status", "ENABLED")
         enabled = self.calls("PUT", r"/schedule$")[0]
-        self.assertEqual(enabled["body"], {"owner": "cove", "expression": "rate(1 hour)", "timezone": "UTC",
+        self.assertEqual(enabled["body"], {"owner": "colvenna", "expression": "rate(1 hour)", "timezone": "UTC",
                                            "state": "ENABLED"})
         after_enable = self.fixture.pipelines["orders"]["revision"]
         self.page.click("#schedule-pause")
         expect(self.page.locator("#pipeline-summary .status-badge")).to_have_attribute("data-status", "PAUSED")
         paused = self.calls("PUT", r"/schedule$")[1]
         self.assertEqual(paused["headers"]["If-Match"], '"' + after_enable + '"')
-        self.assertEqual(paused["body"], {"owner": "cove", "expression": "rate(1 hour)", "timezone": "UTC",
+        self.assertEqual(paused["body"], {"owner": "colvenna", "expression": "rate(1 hour)", "timezone": "UTC",
                                           "state": "PAUSED"})
 
     def test_run_polls_to_published_and_cancel_race_is_shown_verbatim(self):
@@ -1297,7 +1297,7 @@ class AdminBrowser(unittest.TestCase):
         detail = self.page.locator("#environment-detail")
         expect(detail.locator(".meta .status-badge")).to_have_attribute("data-status", "READY")
         expect(detail).to_contain_text("3.12.7")
-        expect(detail).to_contain_text("function:cove-env-pandas:3")
+        expect(detail).to_contain_text("function:colvenna-env-pandas:3")
         self.page.fill("#environment-id", "sql-demo")
         self.page.fill("#environment-version", "v2")
         self.page.fill("#environment-requirements", "duckdb==1.5.6\n")
@@ -1391,7 +1391,7 @@ class AdminBrowser(unittest.TestCase):
         conflict.get_by_role("button", name="release · release_fixture").click()
         expect(nodes).to_have_count(1)
         self.assertEqual(self.calls("GET", r"/trace$")[-1]["query"], {"kind": ["release"], "id": ["release_fixture"]})
-        expect(nodes.first.locator(".link-text")).to_contain_text("completion · s3://cove-data/x")
+        expect(nodes.first.locator(".link-text")).to_contain_text("completion · s3://colvenna-data/x")
         nodes.first.get_by_role("button", name="run · run_trace").click()
         expect(nodes).to_have_count(3)
         self.assertEqual(self.calls("GET", r"/trace$")[-1]["query"],
@@ -1451,7 +1451,7 @@ class AdminBrowser(unittest.TestCase):
         expect(detail.locator(".meta .status-badge")).to_have_attribute("data-status", "COMPLETED")
         expect(detail).to_contain_text("演练（不删除）")
         expect(detail.locator("table").first.locator("tbody tr")).to_have_count(2)
-        expect(detail).to_contain_text("s3://cove-data/spaces/analysis/retention/receipt.json")
+        expect(detail).to_contain_text("s3://colvenna-data/spaces/analysis/retention/receipt.json")
         expect(detail.locator('.status-badge[data-status="WOULD_COLLECT"]')).to_have_count(1)
         expect(self.page.locator("#collections tbody tr .status-badge")).to_have_attribute("data-status", "COMPLETED")
         polls = len(self.calls("GET", r"/retention/collections/"))
@@ -1464,7 +1464,7 @@ class AdminBrowser(unittest.TestCase):
         expect(detail.locator(".meta .status-badge")).to_have_attribute("data-status", "FAILED")
         expect(detail).to_contain_text("错误 RETENTION_DEPENDENCY_UNAVAILABLE")
         expect(detail).to_contain_text("失败调用 DeleteObject · AccessDenied")
-        expect(detail).to_contain_text("s3://cove-data/spaces/analysis/retention/receipt.json")
+        expect(detail).to_contain_text("s3://colvenna-data/spaces/analysis/retention/receipt.json")
 
     def test_quotas_and_cost_estimate_show_basis_and_exclusions(self):
         self.connect()

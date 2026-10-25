@@ -3,7 +3,7 @@
 import json
 
 
-from cove_duckdb.region import regional
+from colvenna_isle.region import regional
 
 def template(baseline, authorizer_id, artifact, source_commit, environment=None, pipelines=None, *, account):
     region = "${AWS::Region}"
@@ -45,16 +45,16 @@ def template(baseline, authorizer_id, artifact, source_commit, environment=None,
                      "Resource": f"arn:aws:s3:::{baseline['DataBucket']}/spaces/*/task-contexts/gen_*/*"},
                 ]}}]}},
         "Control": {"Type": "AWS::Lambda::Function", "Properties": {
-            "Runtime": "python3.12", "Architectures": ["arm64"], "Handler": "cove_duckdb.control.handler.handler",
+            "Runtime": "python3.12", "Architectures": ["arm64"], "Handler": "colvenna_isle.control.handler.handler",
             "Role": {"Fn::GetAtt": ["Role", "Arn"]}, "Timeout": 30, "MemorySize": 512,
             "Code": {"S3Bucket": baseline["DataBucket"], "S3Key": artifact["key"],
                      "S3ObjectVersion": artifact["version_id"]},
             "LoggingConfig": {"LogGroup": {"Ref": "Logs"}},
-            "Environment": {"Variables": {"COVE_ACCOUNT": account, "COVE_CONTROL_TABLE": baseline["ControlTable"],
-                                         "COVE_DATA_BUCKET": baseline["DataBucket"],
-                                         "COVE_WRITER_CONTROL_FUNCTION": writer_function,
-                                         "COVE_WRITER_SOURCE_COMMIT": baseline["WriterSourceCommit"],
-                                         "COVE_SOURCE_COMMIT": source_commit}},
+            "Environment": {"Variables": {"COLVENNA_ACCOUNT": account, "COLVENNA_CONTROL_TABLE": baseline["ControlTable"],
+                                         "COLVENNA_DATA_BUCKET": baseline["DataBucket"],
+                                         "COLVENNA_WRITER_CONTROL_FUNCTION": writer_function,
+                                         "COLVENNA_WRITER_SOURCE_COMMIT": baseline["WriterSourceCommit"],
+                                         "COLVENNA_SOURCE_COMMIT": source_commit}},
             "Tags": tags}},
         "Permission": {"Type": "AWS::Lambda::Permission", "Properties": {
             "FunctionName": {"Ref": "Control"}, "Action": "lambda:InvokeFunction",
@@ -78,19 +78,19 @@ def template(baseline, authorizer_id, artifact, source_commit, environment=None,
             ]}}]}}
     resources["AuthProbe"] = {"Type": "AWS::Lambda::Function", "Properties": {
         "Runtime": "python3.12", "Architectures": ["arm64"],
-        "Handler": "cove_duckdb.control.authorizer.probe_handler",
+        "Handler": "colvenna_isle.control.authorizer.probe_handler",
         "Role": {"Fn::GetAtt": ["AuthProbeRole", "Arn"]}, "Timeout": 10, "MemorySize": 256,
         "Code": {"S3Bucket": baseline["DataBucket"], "S3Key": artifact["key"],
                  "S3ObjectVersion": artifact["version_id"]},
-        "Environment": {"Variables": {"COVE_CONTROL_TABLE": baseline["ControlTable"],
-                                     "COVE_SOURCE_COMMIT": source_commit}},
+        "Environment": {"Variables": {"COLVENNA_CONTROL_TABLE": baseline["ControlTable"],
+                                     "COLVENNA_SOURCE_COMMIT": source_commit}},
         "LoggingConfig": {"LogGroup": {"Ref": "AuthProbeLogs"}}, "Tags": tags}}
     if environment:
         project = environment["project"]
         policy = environment["policy"]
         variables = resources["Control"]["Properties"]["Environment"]["Variables"]
-        variables.update(COVE_ENVIRONMENT_PROJECT=project,
-                         COVE_ENVIRONMENT_POLICY=json.dumps(policy, separators=(",", ":")))
+        variables.update(COLVENNA_ENVIRONMENT_PROJECT=project,
+                         COLVENNA_ENVIRONMENT_POLICY=json.dumps(policy, separators=(",", ":")))
         statements = resources["Role"]["Properties"]["Policies"][0]["PolicyDocument"]["Statement"]
         statements.extend([
             {"Effect": "Allow", "Action": ["dynamodb:GetItem", "dynamodb:PutItem"],
@@ -155,7 +155,7 @@ def template(baseline, authorizer_id, artifact, source_commit, environment=None,
             "AuthorizerId": authorizer_id, "Target": {"Fn::Sub": "integrations/${Integration}"}}}
     for resource in resources.values():
         if resource["Type"] == "AWS::Lambda::Function":
-            resource["Properties"].setdefault("Environment", {}).setdefault("Variables", {})["COVE_REGION"] = {"Ref": "AWS::Region"}
+            resource["Properties"].setdefault("Environment", {}).setdefault("Variables", {})["COLVENNA_REGION"] = {"Ref": "AWS::Region"}
     return regional({
         "AWSTemplateFormatVersion": "2010-09-09",
         "Description": "Colvenna Isle control services on the private baseline",
@@ -216,8 +216,8 @@ def add_governance(resources, baseline, artifact, source_commit, tags, account, 
     bucket = baseline["DataBucket"]
     queues = [queue_arn(baseline[name], account, region) for name in ["IngressQueue", "Dlq"]]
     variables = resources["Control"]["Properties"]["Environment"]["Variables"]
-    variables.update(COVE_INGRESS_QUEUE=baseline["IngressQueue"], COVE_DLQ=baseline["Dlq"],
-                     COVE_COLLECTOR_FUNCTION={"Ref": "Collector"})
+    variables.update(COLVENNA_INGRESS_QUEUE=baseline["IngressQueue"], COLVENNA_DLQ=baseline["Dlq"],
+                     COLVENNA_COLLECTOR_FUNCTION={"Ref": "Collector"})
     # A separate managed policy keeps the inline control policy within IAM size limits.
     resources["GovernancePolicy"] = {"Type": "AWS::IAM::ManagedPolicy", "Properties": {
         "Roles": [{"Ref": "Role"}], "PolicyDocument": {"Version": "2012-10-17", "Statement": [
@@ -268,18 +268,18 @@ def add_governance(resources, baseline, artifact, source_commit, tags, account, 
                  "Resource": f"arn:aws:s3:::{bucket}/spaces/*/gen_*/warehouse/*"},
             ]}}]}}
     resources["Collector"] = {"Type": "AWS::Lambda::Function", "Properties": {
-        "Runtime": "python3.12", "Architectures": ["arm64"], "Handler": "cove_duckdb.control.collector.handler",
+        "Runtime": "python3.12", "Architectures": ["arm64"], "Handler": "colvenna_isle.control.collector.handler",
         "Role": {"Fn::GetAtt": ["CollectorRole", "Arn"]}, "Timeout": 300, "MemorySize": 512,
         # One collector at a time; a per-space lease also serializes overlapping work.
         "ReservedConcurrentExecutions": 1,
         "Code": {"S3Bucket": baseline["DataBucket"], "S3Key": artifact["key"], "S3ObjectVersion": artifact["version_id"]},
         "LoggingConfig": {"LogGroup": {"Ref": "CollectorLogs"}},
         "Environment": {"Variables": {
-            "COVE_ACCOUNT": account, "COVE_CONTROL_TABLE": baseline["ControlTable"],
-            "COVE_DATA_BUCKET": baseline["DataBucket"],
-            "COVE_WRITER_CONTROL_FUNCTION": writer_function,
-            "COVE_WRITER_SOURCE_COMMIT": baseline["WriterSourceCommit"], "COVE_SOURCE_COMMIT": source_commit,
-            "COVE_INGRESS_QUEUE": baseline["IngressQueue"], "COVE_DLQ": baseline["Dlq"]}},
+            "COLVENNA_ACCOUNT": account, "COLVENNA_CONTROL_TABLE": baseline["ControlTable"],
+            "COLVENNA_DATA_BUCKET": baseline["DataBucket"],
+            "COLVENNA_WRITER_CONTROL_FUNCTION": writer_function,
+            "COLVENNA_WRITER_SOURCE_COMMIT": baseline["WriterSourceCommit"], "COLVENNA_SOURCE_COMMIT": source_commit,
+            "COLVENNA_INGRESS_QUEUE": baseline["IngressQueue"], "COLVENNA_DLQ": baseline["Dlq"]}},
         "Tags": tags}}
     resources["CollectorInvokeRole"] = {"Type": "AWS::IAM::Role", "Properties": {
         "AssumeRolePolicyDocument": {"Version": "2012-10-17", "Statement": [{
@@ -293,7 +293,7 @@ def add_governance(resources, baseline, artifact, source_commit, tags, account, 
         "ScheduleExpression": "rate(5 minutes)", "FlexibleTimeWindow": {"Mode": "OFF"}, "State": "ENABLED",
         "Target": {"Arn": {"Fn::GetAtt": ["Collector", "Arn"]},
                    "RoleArn": {"Fn::GetAtt": ["CollectorInvokeRole", "Arn"]},
-                   "Input": json.dumps({"source": "cove.retention"}),
+                   "Input": json.dumps({"source": "colvenna.retention"}),
                    "RetryPolicy": {"MaximumRetryAttempts": 0, "MaximumEventAgeInSeconds": 300}}}}
 
 
@@ -327,7 +327,7 @@ def add_pipeline_runs(resources, baseline, artifact, source_commit, environment,
     statements.extend(run_statements + [
         {"Effect": "Allow", "Action": ["lambda:InvokeFunction"], "Resource": {"Fn::GetAtt": ["Scheduler", "Arn"]}}])
     variables = resources["Control"]["Properties"]["Environment"]["Variables"]
-    variables.update(COVE_COMPUTE_NETWORK=network_value, COVE_SCHEDULER_FUNCTION={"Ref": "Scheduler"})
+    variables.update(COLVENNA_COMPUTE_NETWORK=network_value, COLVENNA_SCHEDULER_FUNCTION={"Ref": "Scheduler"})
     resources["SchedulerLogs"] = {"Type": "AWS::Logs::LogGroup", "Properties": {"RetentionInDays": 7, "Tags": tags}}
     resources["SchedulerRole"] = {"Type": "AWS::IAM::Role", "Properties": {
         "AssumeRolePolicyDocument": {"Version": "2012-10-17", "Statement": [{
@@ -363,20 +363,20 @@ def add_pipeline_runs(resources, baseline, artifact, source_commit, environment,
                                               "sqs:GetQueueAttributes"], "Resource": queue},
             ]}}]}}
     resources["Scheduler"] = {"Type": "AWS::Lambda::Function", "Properties": {
-        "Runtime": "python3.12", "Architectures": ["arm64"], "Handler": "cove_duckdb.control.scheduler.handler",
+        "Runtime": "python3.12", "Architectures": ["arm64"], "Handler": "colvenna_isle.control.scheduler.handler",
         "Role": {"Fn::GetAtt": ["SchedulerRole", "Arn"]}, "Timeout": 90, "MemorySize": 512,
         # One tick at a time; every step is also conditional on run revision.
         "ReservedConcurrentExecutions": 1,
         "Code": {"S3Bucket": baseline["DataBucket"], "S3Key": artifact["key"], "S3ObjectVersion": artifact["version_id"]},
         "LoggingConfig": {"LogGroup": {"Ref": "SchedulerLogs"}},
         "Environment": {"Variables": {
-            "COVE_ACCOUNT": account, "COVE_CONTROL_TABLE": baseline["ControlTable"],
-            "COVE_DATA_BUCKET": baseline["DataBucket"],
-            "COVE_WRITER_CONTROL_FUNCTION": writer_function,
-            "COVE_WRITER_SOURCE_COMMIT": baseline["WriterSourceCommit"], "COVE_SOURCE_COMMIT": source_commit,
-            "COVE_ENVIRONMENT_PROJECT": environment["project"],
-            "COVE_ENVIRONMENT_POLICY": json.dumps(policy, separators=(",", ":")),
-            "COVE_COMPUTE_NETWORK": network_value, "COVE_PIPELINE_EVENTS_QUEUE": policy["notification_queue_url"]}},
+            "COLVENNA_ACCOUNT": account, "COLVENNA_CONTROL_TABLE": baseline["ControlTable"],
+            "COLVENNA_DATA_BUCKET": baseline["DataBucket"],
+            "COLVENNA_WRITER_CONTROL_FUNCTION": writer_function,
+            "COLVENNA_WRITER_SOURCE_COMMIT": baseline["WriterSourceCommit"], "COLVENNA_SOURCE_COMMIT": source_commit,
+            "COLVENNA_ENVIRONMENT_PROJECT": environment["project"],
+            "COLVENNA_ENVIRONMENT_POLICY": json.dumps(policy, separators=(",", ":")),
+            "COLVENNA_COMPUTE_NETWORK": network_value, "COLVENNA_PIPELINE_EVENTS_QUEUE": policy["notification_queue_url"]}},
         "Tags": tags}}
     resources["SchedulerInvokeRole"] = {"Type": "AWS::IAM::Role", "Properties": {
         "AssumeRolePolicyDocument": {"Version": "2012-10-17", "Statement": [{
@@ -391,5 +391,5 @@ def add_pipeline_runs(resources, baseline, artifact, source_commit, environment,
         "State": pipelines.get("state", "ENABLED"),
         "Target": {"Arn": {"Fn::GetAtt": ["Scheduler", "Arn"]},
                    "RoleArn": {"Fn::GetAtt": ["SchedulerInvokeRole", "Arn"]},
-                   "Input": json.dumps({"source": "cove.schedule"}),
+                   "Input": json.dumps({"source": "colvenna.schedule"}),
                    "RetryPolicy": {"MaximumRetryAttempts": 0, "MaximumEventAgeInSeconds": 60}}}}

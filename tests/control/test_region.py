@@ -7,11 +7,11 @@ import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from cove_duckdb.contracts.validation import ContractError, validate
-from cove_duckdb.control.costs import Costs
-from cove_duckdb.control.prices import for_region
-from cove_duckdb.control.registry import Principal
-from cove_duckdb.region import region
+from colvenna_isle.contracts.validation import ContractError, validate
+from colvenna_isle.control.costs import Costs
+from colvenna_isle.control.prices import for_region
+from colvenna_isle.control.registry import Principal
+from colvenna_isle.region import region
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -19,13 +19,13 @@ ROOT = Path(__file__).resolve().parents[2]
 
 class Regions(unittest.TestCase):
     def test_explicit_configuration_and_runtime_injection_select_a_commercial_region(self):
-        for name in ["COVE_REGION", "AWS_REGION", "AWS_DEFAULT_REGION"]:
+        for name in ["COLVENNA_REGION", "AWS_REGION", "AWS_DEFAULT_REGION"]:
             for value in ["us-west-2", "eu-central-1", "ap-southeast-2"]:
                 with self.subTest(name=name, value=value), patch.dict(os.environ, {name: value}, clear=True):
                     self.assertEqual(region(), value)
 
     def test_missing_conflicting_and_other_partition_regions_are_rejected(self):
-        for environment in [{}, {"COVE_REGION": "eu-central-1", "AWS_REGION": "us-west-2"},
+        for environment in [{}, {"COLVENNA_REGION": "eu-central-1", "AWS_REGION": "us-west-2"},
                 {"AWS_REGION": "eu-central-1", "AWS_DEFAULT_REGION": "us-west-2"},
                 {"AWS_REGION": "cn-north-1"}, {"AWS_REGION": "us-gov-west-1"},
                 {"AWS_REGION": "us-iso-east-1"}, {"AWS_REGION": "invalid"}]:
@@ -58,12 +58,12 @@ class Regions(unittest.TestCase):
                          {"Fn::Sub": "com.amazonaws.${AWS::Region}.s3"})
         for resource in resources.values():
             if resource["Type"] == "AWS::Lambda::Function":
-                self.assertEqual(resource["Properties"]["Environment"]["Variables"]["COVE_REGION"],
+                self.assertEqual(resource["Properties"]["Environment"]["Variables"]["COLVENNA_REGION"],
                                  {"Ref": "AWS::Region"})
             if resource["Type"] == "AWS::ECS::TaskDefinition":
                 for container in resource["Properties"]["ContainerDefinitions"]:
                     if container.get("Image", {}).get("Ref") in {"WriterImage", "QueryImage"}:
-                        self.assertIn({"Name": "COVE_REGION", "Value": {"Ref": "AWS::Region"}},
+                        self.assertIn({"Name": "COLVENNA_REGION", "Value": {"Ref": "AWS::Region"}},
                                       container["Environment"])
 
     def test_same_environment_in_two_regions_has_disjoint_account_global_runtime_names(self):
@@ -72,7 +72,7 @@ class Regions(unittest.TestCase):
         spec.loader.exec_module(module)
         prefixes = []
         for value in ["us-west-2", "eu-central-1"]:
-            with patch.dict(os.environ, {"COVE_REGION": value}, clear=True):
+            with patch.dict(os.environ, {"COLVENNA_REGION": value}, clear=True):
                 prefixes.append(module.names("prod")["runtime_prefix"])
         self.assertFalse(prefixes[0].startswith(prefixes[1]))
         self.assertFalse(prefixes[1].startswith(prefixes[0]))
@@ -108,7 +108,7 @@ class Regions(unittest.TestCase):
         registry._read.return_value = {"space_id": "fixture", "generation": "gen_fixture"}
         keys = Mock()
         keys.authenticate_id.return_value = principal
-        with patch.dict(os.environ, {"COVE_REGION": "eu-central-1"}, clear=True):
+        with patch.dict(os.environ, {"COLVENNA_REGION": "eu-central-1"}, clear=True):
             costs = Costs(registry, keys, Mock(), Mock(), Mock(), clock=lambda: 1792551000)
             costs._runs = Mock(side_effect=AssertionError("unpriced workload must not be estimated"))
             value = costs.report(principal, "fixture")

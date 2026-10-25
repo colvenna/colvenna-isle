@@ -112,9 +112,9 @@ class FailureReceiptTests(unittest.TestCase):
 
 class ResolverDiagnosticsTests(unittest.TestCase):
     def test_only_submitted_requirements_are_named(self):
-        output = ("ERROR: Could not find a version that satisfies the requirement Cove_Missing>=1 (from versions: none)\n"
+        output = ("ERROR: Could not find a version that satisfies the requirement Colvenna_Missing>=1 (from versions: none)\n"
                   "ERROR: No matching distribution found for transitive-dep==2 https://evil.example/\n")
-        self.assertEqual(resolver.unresolved(output, ["six==1.16.0", "cove-missing>=1"]), ["cove-missing>=1"])
+        self.assertEqual(resolver.unresolved(output, ["six==1.16.0", "colvenna-missing>=1"]), ["colvenna-missing>=1"])
         self.assertEqual(resolver.unresolved("ERROR: ResolutionImpossible\n", ["six==1.16.0"]), [])
 
 

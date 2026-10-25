@@ -3,8 +3,8 @@
 import unittest
 from unittest.mock import patch
 
-from cove_duckdb.pipeline import sql_task
-from cove_duckdb.pipeline.environment_adapter import sql_check
+from colvenna_isle.pipeline import sql_task
+from colvenna_isle.pipeline.environment_adapter import sql_check
 
 
 class EnvironmentSqlCheck(unittest.TestCase):

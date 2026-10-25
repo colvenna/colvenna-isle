@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Install or upgrade one Colvenna Isle environment from one fixed release build, in dependency order.
 
-COVE_ENVIRONMENT (required) names the environment. `fresh` creates every stack
+COLVENNA_ENVIRONMENT (required) names the environment. `fresh` creates every stack
 of a new environment; `upgrade` first closes admission of an installed
 environment (old writer stopped with a terminal receipt), then replaces every
 component with the release source. Each step runs the repository's own scoped
@@ -116,7 +116,7 @@ def main():
         "open": ["admission.py", "open", "--query-count", args.query_count],
     }
     environment = {key: value for key, value in os.environ.items() if key not in {"AWS_PROFILE", "AWS_DEFAULT_PROFILE"}}
-    environment.update(COVE_REGION=REGION, AWS_REGION=REGION, AWS_DEFAULT_REGION=REGION, COVE_ENVIRONMENT=STACKS["environment"])
+    environment.update(COLVENNA_REGION=REGION, AWS_REGION=REGION, AWS_DEFAULT_REGION=REGION, COLVENNA_ENVIRONMENT=STACKS["environment"])
     for step in steps:
         started = time.monotonic()
         tool, *arguments = commands[step]

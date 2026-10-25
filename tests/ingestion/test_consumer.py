@@ -9,9 +9,9 @@ from unittest.mock import Mock
 
 import duckdb
 
-from cove_duckdb.control.registry import canonical
-from cove_duckdb.writer.consumer import Consumer
-from cove_duckdb.writer.ingestion import IngestionStore, digest
+from colvenna_isle.control.registry import canonical
+from colvenna_isle.writer.consumer import Consumer
+from colvenna_isle.writer.ingestion import IngestionStore, digest
 from test_transactions import DEFINITION, REGISTERED, payload
 
 
@@ -40,7 +40,7 @@ class Consumption(unittest.TestCase):
         raw = canonical(value).encode()
         ingestion_id = "ing_" + digest(key)
         message = {
-            "contract_version": 1, "ingestion_id": ingestion_id, "space_id": "test_space",
+            "contract_version": 2, "ingestion_id": ingestion_id, "space_id": "test_space",
             "generation": self.configuration["generation"], "route_version": 1,
             "dataset": "ods.orders", "schema_version": 1, "dataset_definition_sha256": digest(DEFINITION),
             "principal_id": "test_owner", "payload_sha256": digest(value),

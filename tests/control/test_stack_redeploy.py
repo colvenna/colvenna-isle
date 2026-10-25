@@ -9,7 +9,7 @@ from pathlib import Path
 from botocore.exceptions import ClientError
 
 # The operator tools name their stacks from an explicit environment.
-os.environ.setdefault("COVE_ENVIRONMENT", "qa")
+os.environ.setdefault("COLVENNA_ENVIRONMENT", "qa")
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts/aws"))

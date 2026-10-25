@@ -14,20 +14,20 @@ from pathlib import Path
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from cove_duckdb.control.registry import ControlError, canonical
-from cove_duckdb.pipeline.parquet import write
-from cove_duckdb.pipeline.task_adapter import TaskAdapter
-from cove_duckdb.pipeline.task_descriptor import digest
-from cove_duckdb.pipeline.task_objects import TaskObjects
-from cove_duckdb.writer.ingestion import wire
+from colvenna_isle.control.registry import ControlError, canonical
+from colvenna_isle.pipeline.parquet import write
+from colvenna_isle.pipeline.task_adapter import TaskAdapter
+from colvenna_isle.pipeline.task_descriptor import digest
+from colvenna_isle.pipeline.task_objects import TaskObjects
+from colvenna_isle.writer.ingestion import wire
 from test_task_adapter import PYTHON_PATH, VersionStore
 
 EVENTS = [{"name": "order_id", "type": "BIGINT", "nullable": False},
           {"name": "order_date", "type": "DATE", "nullable": False},
           {"name": "amount", "type": "DECIMAL(18,2)", "nullable": True},
           {"name": "source_version", "type": "BIGINT", "nullable": False},
-          {"name": "_cove_operation", "type": "VARCHAR", "nullable": False},
-          {"name": "_cove_commit_sequence", "type": "BIGINT", "nullable": False}]
+          {"name": "_colvenna_operation", "type": "VARCHAR", "nullable": False},
+          {"name": "_colvenna_commit_sequence", "type": "BIGINT", "nullable": False}]
 DAILY = [{"name": "order_date", "type": "DATE", "nullable": False},
          {"name": "revenue", "type": "DECIMAL(38,2)", "nullable": False},
          {"name": "order_count", "type": "BIGINT", "nullable": False}]
@@ -39,10 +39,10 @@ ROWS = [[1, date(2026, 10, 1), Decimal("10.10"), 1, "upsert", 1],
 CLEAN = """
 WITH ranked AS (
   SELECT *, row_number() OVER (PARTITION BY order_id
-                               ORDER BY source_version DESC, _cove_commit_sequence DESC) AS rank
+                               ORDER BY source_version DESC, _colvenna_commit_sequence DESC) AS rank
   FROM events)
 SELECT order_date, CAST(sum(amount) AS DECIMAL(38,2)) AS revenue, CAST(count(*) AS BIGINT) AS order_count
-FROM ranked WHERE rank = 1 AND _cove_operation <> 'delete' GROUP BY order_date
+FROM ranked WHERE rank = 1 AND _colvenna_operation <> 'delete' GROUP BY order_date
 """
 
 
@@ -120,7 +120,7 @@ class SqlTasks(unittest.TestCase):
             selection = {"mode": "affected_partitions", "partitions": partitions}
             processing = {"mode": "partition_recompute", "affected_partitions": partitions}
             replace = partitions
-        descriptor = {"contract_version": 1, "space_id": "owned", "generation": "gen_owned",
+        descriptor = {"contract_version": 2, "space_id": "owned", "generation": "gen_owned",
             "pipeline_id": "demo", "pipeline_version": "v1", "definition_epoch": "e" * 64,
             "run_id": "run_one", "job_id": "job_" + executor, "attempt_id": "attempt_one",
             "task": task, "environment": environment, "parameters": {}, "processing": processing,
@@ -129,7 +129,7 @@ class SqlTasks(unittest.TestCase):
                 "watermark": {"ods_sequence": 5}, "schema": copy.deepcopy(EVENTS),
                 "files": [copy.deepcopy(self.input)], "selection": selection}}}
         binding = descriptor["inputs"]["events"]
-        binding["manifest_sha256"] = digest({"contract_version": 1,
+        binding["manifest_sha256"] = digest({"contract_version": 2,
             **{name: binding[name] for name in ["dataset", "release_id", "watermark", "schema", "files"]}})
         definition = {"spec_version": 1, "pipeline_id": "demo", "name": "SQL", "schedule": {"owner": "none"},
                       "max_active_runs": 1, "coalesce_pending": True, "tasks": [task]}
@@ -140,8 +140,8 @@ class SqlTasks(unittest.TestCase):
         descriptor["snapshot_sha256"] = digest(snapshot)
         buffer = io.BytesIO()
         with zipfile.ZipFile(buffer, "w") as archive:
-            for name, raw in [("sql/daily.sql", code), (".cove/manifest.json", canonical(snapshot).encode()),
-                              (".cove/definition.json", canonical(definition).encode())]:
+            for name, raw in [("sql/daily.sql", code), (".colvenna/manifest.json", canonical(snapshot).encode()),
+                              (".colvenna/definition.json", canonical(definition).encode())]:
                 info = zipfile.ZipInfo(name)
                 info.external_attr = 0o100644 << 16
                 archive.writestr(info, raw)

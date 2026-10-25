@@ -3,7 +3,7 @@
 import unittest
 from unittest.mock import Mock
 
-from cove_duckdb.writer.controller import Controller
+from colvenna_isle.writer.controller import Controller
 
 
 class QueryIndependence(unittest.TestCase):
@@ -35,7 +35,7 @@ class QueryIndependence(unittest.TestCase):
         controller.boundary = None
         controller.ecs.get_paginator.return_value.paginate.side_effect = [
             [{"taskArns": ["writer", "compute"]}], [{"taskArns": []}]]
-        compute = {"taskArn": "compute", "lastStatus": "RUNNING", "startedBy": "cove-0123",
+        compute = {"taskArn": "compute", "lastStatus": "RUNNING", "startedBy": "colvenna-0123",
                    "taskDefinitionArn": "arn:aws:ecs:us-west-2:1:task-definition/colvenna-isle-env-abc:1"}
         if override:
             compute["overrides"] = {"taskRoleArn": override}
@@ -45,7 +45,7 @@ class QueryIndependence(unittest.TestCase):
         policy = '{"runtime_boundary_arn": "arn:aws:iam::1:policy/RuntimeBoundary", "runtime_prefix": "colvenna-isle-env-"}'
         definitions = {
             "writer-def": {"taskDefinition": {"containerDefinitions": [{"environment": [
-                {"name": "COVE_ENVIRONMENT_POLICY", "value": policy}]}]}},
+                {"name": "COLVENNA_ENVIRONMENT_POLICY", "value": policy}]}]}},
             compute["taskDefinitionArn"]: {"taskDefinition": {"taskRoleArn": "arn:aws:iam::1:role/colvenna-isle-env-1"}}}
         controller.ecs.describe_task_definition.side_effect = lambda taskDefinition: definitions[taskDefinition]
         controller.iam.get_role.return_value = {"Role": {"PermissionsBoundary": {"PermissionsBoundaryArn": boundary}}}

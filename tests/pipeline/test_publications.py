@@ -10,14 +10,14 @@ from pathlib import Path
 import duckdb
 import pyarrow.parquet as pq
 
-from cove_duckdb.control.registry import ControlError, canonical
-from cove_duckdb.control.pipelines import DEFINITION_EPOCH
-from cove_duckdb.pipeline.native_inputs import capture
-from cove_duckdb.pipeline.publications import CHUNK_ROWS, Publications, resolve_release
-from cove_duckdb.pipeline.task_descriptor import descriptor_key
-from cove_duckdb.query.native import stage
-from cove_duckdb.query.sql import Session
-from cove_duckdb.writer.ingestion import CommitUnknown, IngestionStore, digest
+from colvenna_isle.control.registry import ControlError, canonical
+from colvenna_isle.control.pipelines import DEFINITION_EPOCH
+from colvenna_isle.pipeline.native_inputs import capture
+from colvenna_isle.pipeline.publications import CHUNK_ROWS, Publications, resolve_release
+from colvenna_isle.pipeline.task_descriptor import descriptor_key
+from colvenna_isle.query.native import stage
+from colvenna_isle.query.sql import Session
+from colvenna_isle.writer.ingestion import CommitUnknown, IngestionStore, digest
 
 COLUMNS = [{"name": "id", "type": "BIGINT", "nullable": False},
            {"name": "amount", "type": "DECIMAL(38,2)", "nullable": False}]
@@ -86,9 +86,9 @@ class NativePublications(unittest.TestCase):
                 "s3_uri": "s3://test-bucket/spaces/owned/inputs/gen_owned/export_one/exec_one/part.parquet",
                 "object_version": "input-v1", "sha256": "f" * 64, "rows": 1, "bytes": 100}],
             "selection": {"mode": "snapshot"}}
-        binding["manifest_sha256"] = digest({"contract_version": 1,
+        binding["manifest_sha256"] = digest({"contract_version": 2,
             **{name: binding[name] for name in ["dataset", "release_id", "watermark", "schema", "files"]}})
-        return {"contract_version": 1, "space_id": "owned", "generation": "gen_owned",
+        return {"contract_version": 2, "space_id": "owned", "generation": "gen_owned",
             "pipeline_id": "demo", "pipeline_version": "v1", "definition_epoch": DEFINITION_EPOCH,
             "snapshot_sha256": "f" * 64, "run_id": "run_one", "job_id": job, "attempt_id": attempt,
             "task": task, "package": {"s3_uri":
@@ -145,7 +145,7 @@ class NativePublications(unittest.TestCase):
 
     def rows(self, release, connection=None):
         return (connection or self.writer).execute(
-            "SELECT * FROM warehouse._cove_data." + release["physical"]["table"] + " ORDER BY id").fetchall()
+            "SELECT * FROM warehouse._colvenna_data." + release["physical"]["table"] + " ORDER BY id").fetchall()
 
     def test_query_explicit_historical_release_never_substitutes_current_values(self):
         old = self.release("query_old", [[1, Decimal("12.30")]])
@@ -217,7 +217,7 @@ class NativePublications(unittest.TestCase):
 
     def test_query_published_cannot_read_direct_table_as_an_analytical_release(self):
         self.release("query_published", [[1, Decimal("12.30")]])
-        from cove_duckdb.writer.writes import WriteStore, write_id
+        from colvenna_isle.writer.writes import WriteStore, write_id
         definition = {"dataset": "dwd.source", "schema_version": 1, "write_owner": "direct",
             "schema": copy.deepcopy(COLUMNS), "key_columns": ["id"], "partition_columns": [],
             "constraints": {"primary_key": ["id"]}}
@@ -404,7 +404,7 @@ class NativePublications(unittest.TestCase):
     def test_physical_custody_and_current_registered_target_fail_closed(self):
         release = self.release("job_one", [[1, EXACT]])
         table = release["physical"]["table"]
-        self.writer.execute("ALTER TABLE warehouse._cove_data." + table + " ADD COLUMN unexpected VARCHAR")
+        self.writer.execute("ALTER TABLE warehouse._colvenna_data." + table + " ADD COLUMN unexpected VARCHAR")
         with self.assertRaisesRegex(ControlError, "PUBLICATION_PHYSICAL_CUSTODY_UNKNOWN"):
             resolve_release(self.reader, self.configuration, "dwd.result")
         self.configuration["datasets"]["dwd.result"]["definition"]["write_owner"] = "direct"
@@ -412,7 +412,7 @@ class NativePublications(unittest.TestCase):
             self.store.status("job_one")
 
     def test_controlled_native_read_and_full_input_export_use_only_the_published_pointer(self):
-        from cove_duckdb.query.native import describe
+        from colvenna_isle.query.native import describe
 
         candidate = self.select(self.grant(), [1])
         self.chunk(candidate, 0, 0, [[9007199254740993, EXACT]])
@@ -443,7 +443,7 @@ class NativePublications(unittest.TestCase):
 
     def state_rows(self, release, connection=None):
         return (connection or self.writer).execute(
-            "SELECT * FROM warehouse._cove_data." + release["state"]["physical"]["table"] +
+            "SELECT * FROM warehouse._colvenna_data." + release["state"]["physical"]["table"] +
             " ORDER BY id").fetchall()
 
     def test_complete_data_state_pairs_publish_atomically_and_old_mvcc_pair_is_retained(self):
@@ -545,7 +545,7 @@ class NativePublications(unittest.TestCase):
         with self.assertRaisesRegex(ControlError, "PUBLICATION_STATE_POINTER_CUSTODY_UNKNOWN"):
             resolve_release(self.reader, self.configuration, "dwd.result")
         self.writer.execute("UPDATE warehouse.ctl.state_pointers SET state_record=?", [canonical(release["state"])])
-        self.writer.execute("ALTER TABLE warehouse._cove_data." + release["state"]["physical"]["table"] +
+        self.writer.execute("ALTER TABLE warehouse._colvenna_data." + release["state"]["physical"]["table"] +
                             " ADD COLUMN unexpected VARCHAR")
         with self.assertRaisesRegex(ControlError, "PUBLICATION_STATE_CUSTODY_UNKNOWN"):
             resolve_release(self.reader, self.configuration, "dwd.result")

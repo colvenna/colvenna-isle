@@ -2,7 +2,7 @@
 
 import unittest
 
-from cove_duckdb.contracts.validation import ContractError, validate, validate_transition
+from colvenna_isle.contracts.validation import ContractError, validate, validate_transition
 
 
 class QueryJobContract(unittest.TestCase):

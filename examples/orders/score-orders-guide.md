@@ -1,6 +1,6 @@
 # score_orders 配置与输出清单详解
 
-适用版本：1.1.0。本文说明 `score_orders` 的配置与执行协议；云端执行（Lambda / ECS 运行环境、资源 profile 与数据库发布）见[用户手册](../../docs/user-guide.md#8-流水线)。
+适用版本：2.0.0 候选，合同 revision 为 2；历史 1.1.0 的 AWS 验收不代表候选通过，候选验证范围见 [PR #23](https://github.com/colvenna/colvenna-isle/pull/23)。本文说明 `score_orders` 的配置与执行协议；云端执行（Lambda / ECS 运行环境、资源 profile 与数据库发布）见[用户手册](../../docs/user-guide.md#8-流水线)。
 
 该任务等待 clean_orders 发布结果，在 Lambda 中运行 Python，对完整订单快照分类，再由唯一写者发布 dwd.order_scores。配置源见 [pipeline.yaml](pipeline.yaml)，代码见 [score_orders.py](python/score_orders.py)。
 
@@ -50,7 +50,7 @@ selection: snapshot 表示完整、固定的输入快照；processing.mode: full
 local_files 模式下，adapter 为每次实际 execution 创建独立目录。例如：
 
 ```text
-/tmp/cove/run_123/attempt_1/exec_1/
+/tmp/colvenna/run_123/attempt_1/exec_1/
 ├── context.json
 ├── input/
 │   └── orders/
@@ -71,7 +71,7 @@ context.json 提供实际 input 文件路径和 output.directory。业务脚本�
 
 ```json
 {
-  "contract_version": 1,
+  "contract_version": 2,
   "job_id": "job_123",
   "attempt_id": "attempt_1",
   "execution_id": "exec_1",

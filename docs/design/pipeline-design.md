@@ -1,8 +1,8 @@
 # 内置流水线：SQL、Python 与外部编排
 
-适用版本：1.1.0。定义与版本、运行与 DAG、调度、取消与重试、SQL / Python 任务、固定输入、原生发布与 Airflow 编排均已实现，使用方式见[用户手册](../user-guide.md)。任务示例用于验证数据合同。
+适用版本：2.0.0 候选；本文使用当前标识与契约；历史 1.1.0 的 AWS 验收不代表候选通过，候选验证范围见 [PR #23](https://github.com/colvenna/colvenna-isle/pull/23)。定义与版本、运行与 DAG、调度、取消与重试、SQL / Python 任务、固定输入、原生发布与 Airflow 编排均已实现，使用方式见[用户手册](../user-guide.md)。任务示例用于验证数据合同。
 
-合同版本 1 的[机器合同](../../src/cove_duckdb/contracts/v1/contracts.schema.json)、[profile 与准入上限](../../src/cove_duckdb/contracts/v1/profiles.json)和[语义校验器](../../src/cove_duckdb/contracts/validation.py)明确准入上限、输入/输出字段和状态规则；JSON Schema 通过仍需语义及真实资源校验。writer 任务省略 runtime_environment/input_mode，使用平台固定环境和原生版本绑定；外部任务显式声明这些字段。
+合同版本 2 的[机器合同](../../src/colvenna_isle/contracts/v2/contracts.schema.json)、[profile 与准入上限](../../src/colvenna_isle/contracts/v2/profiles.json)和[语义校验器](../../src/colvenna_isle/contracts/validation.py)明确准入上限、输入/输出字段和状态规则；JSON Schema 通过仍需语义及真实资源校验。writer 任务省略 runtime_environment/input_mode，使用平台固定环境和原生版本绑定；外部任务显式声明这些字段。
 
 升级是停机的破坏性升级，见[安装部署手册](../installation.md#10-破坏性升级)。本文的固定版本约束适用于单次运行及当前合同，不要求旧产品版本的定义或运行继续工作。
 
@@ -12,7 +12,7 @@
 
 Airflow 是可选的外部编排方。它负责跨系统依赖，调用 Colvenna Isle 的运行 API 并等待发布结果；Colvenna Isle 继续负责固定输入、计算、唯一写者导入及发布。用户不需要部署 Airflow 才能完成 ODS → DWD → DWS → ADS。
 
-一条流水线的自动触发方由 `schedule.owner` 明确选择 `cove`、`external` 或 `none`。选择 external 时关闭 Colvenna Isle 的自动运行创建；Colvenna Isle 仍执行该流水线内部 DAG。`none` 用于只允许手动运行。切换触发方使用版本条件更新，避免两边同时自动启动。
+一条流水线的自动触发方由 `schedule.owner` 明确选择 `colvenna`、`external` 或 `none`。选择 external 时关闭 Colvenna Isle 的自动运行创建；Colvenna Isle 仍执行该流水线内部 DAG。`none` 用于只允许手动运行。切换触发方使用版本条件更新，避免两边同时自动启动。
 
 ## 2. 定义与发布
 
@@ -139,7 +139,7 @@ BLOCKED → READY → DISPATCHING → RUNNING → STAGED → VALIDATING
 
 ## 7. 定义、环境和状态存在哪里
 
-继续使用一张 `cove-control` 表：
+继续使用一张 `colvenna-control` 表：
 
 | `PK=SPACE#<space_id>` 下的 SK | 内容 |
 | --- | --- |

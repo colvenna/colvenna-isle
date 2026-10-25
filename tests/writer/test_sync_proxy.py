@@ -8,10 +8,10 @@ import unittest
 from unittest.mock import Mock
 from urllib.error import URLError
 
-from cove_duckdb.control.registry import ControlError, Principal
-from cove_duckdb.sync.handler import handle
-from cove_duckdb.sync.service import Proxy, WriteUnknown
-from cove_duckdb.writer.writes import digest, write_id
+from colvenna_isle.control.registry import ControlError, Principal
+from colvenna_isle.sync.handler import handle
+from colvenna_isle.sync.service import Proxy, WriteUnknown
+from colvenna_isle.writer.writes import digest, write_id
 
 
 SPACE, GENERATION, SOURCE = "fixture", "gen_" + "a" * 32, "a" * 40
@@ -132,7 +132,7 @@ class SyncProxyTests(unittest.TestCase):
         self.assertEqual(handle(event(wrong_scope), self.proxy, keys)["statusCode"], 403)
         keys.authenticate.return_value = PRINCIPAL
         internal = event()
-        internal["headers"]["x-cove-principal"] = "another"
+        internal["headers"]["x-colvenna-principal"] = "another"
         self.assertEqual(handle(internal, self.proxy, keys)["statusCode"], 400)
         self.connect.assert_not_called()
 

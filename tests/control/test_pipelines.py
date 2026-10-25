@@ -13,11 +13,11 @@ from unittest.mock import patch
 import boto3
 from botocore.exceptions import ClientError, ReadTimeoutError
 
-from cove_duckdb.control.environments import Environments
-from cove_duckdb.control.handler import clients, handle
-from cove_duckdb.control.pipeline_artifacts import PipelineArtifacts, checksum
-from cove_duckdb.control.pipelines import Pipelines
-from cove_duckdb.control.registry import ControlError, Principal, Registry, canonical
+from colvenna_isle.control.environments import Environments
+from colvenna_isle.control.handler import clients, handle
+from colvenna_isle.control.pipeline_artifacts import PipelineArtifacts, checksum
+from colvenna_isle.control.pipelines import Pipelines
+from colvenna_isle.control.registry import ControlError, Principal, Registry, canonical
 from test_environments import Artifacts, Builds, Table, specification
 
 
@@ -176,7 +176,7 @@ class PipelineTests(unittest.TestCase):
         key = version["package_uri"].split("test-bucket/", 1)[1]
         with zipfile.ZipFile(io.BytesIO(self.objects.objects[key]["Body"])) as package:
             self.assertEqual(package.read("python/transform.py"), self.code)
-            manifest = json.loads(package.read(".cove/manifest.json"))
+            manifest = json.loads(package.read(".colvenna/manifest.json"))
             self.assertEqual(manifest["environments"]["transform"]["executor_binding"]["executor"], "ecs_task")
             self.assertEqual(manifest["definition"], definition())
         activated = self.http("POST", "/demo/activate", published | {}, {
@@ -353,7 +353,7 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(uploaded["upload_headers"]["x-amz-checksum-sha256"], checksum(declaration["sha256"]))
         self.assertEqual(self.objects.signed["Params"]["ContentLength"], len(self.code))
         self.assertIn(self.actor.generation, self.objects.signed["Params"]["Key"])
-        for path in ["../escape.py", "/absolute.py", ".cove/manifest.json", "a/./b.py"]:
+        for path in ["../escape.py", "/absolute.py", ".colvenna/manifest.json", "a/./b.py"]:
             with self.assertRaises((ControlError, ValueError)):
                 self.pipelines.upload(self.actor, "space_one", "demo", {**declaration, "path": path})
 
@@ -364,7 +364,7 @@ class PipelineTests(unittest.TestCase):
             return factory(service, **{"region_name": "us-west-2", **options},
                            aws_access_key_id="synthetic-access", aws_secret_access_key="synthetic-secret")
         clients.cache_clear()
-        with patch("cove_duckdb.control.handler.boto3.client", side_effect=synthetic_client):
+        with patch("colvenna_isle.control.handler.boto3.client", side_effect=synthetic_client):
             _, s3, _ = clients()
         clients.cache_clear()
         declaration = {name: self.request["artifacts"][0][name] for name in ["path", "sha256", "bytes"]}

@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(ROOT), str(ROOT / "src"), str(Path(__file__).parent)]
 from infra.template import template
 from manage import REGION, ACCOUNT, REPOSITORY, STACKS, encode, outputs, owned_stack, publish_artifact, push_image, session, source, storage_image, template_arguments, update_stack, vault_bucket, wait
-from cove_duckdb.writer.controller import Controller
+from colvenna_isle.writer.controller import Controller
 
 
 def save_in(directory):
@@ -128,7 +128,7 @@ def main():
     body = json.dumps(definition, separators=(",", ":"))
     (directory / "template.json").write_text(body + "\n")
     save("validation", cf.validate_template(**template_arguments(current, body)))
-    token = "cove-writer-" + uuid.uuid4().hex
+    token = "colvenna-writer-" + uuid.uuid4().hex
     save("deployment-admission", {"source_commit": head, "stack_id": baseline["StackId"],
          "client_request_token": token, "parameters": parameters, "artifact": binding,
          "writer_image": writer_image, "template_sha256": hashlib.sha256(body.encode()).hexdigest()})

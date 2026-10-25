@@ -20,11 +20,11 @@ import boto3
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
-from cove_duckdb.account import account
-from cove_duckdb.control.registry import canonical
-from cove_duckdb.control.pipelines import DEFINITION_EPOCH
+from colvenna_isle.account import account
+from colvenna_isle.control.registry import canonical
+from colvenna_isle.control.pipelines import DEFINITION_EPOCH
 
-from cove_duckdb.region import region
+from colvenna_isle.region import region
 
 REGION = region()
 
@@ -192,12 +192,12 @@ def build_images(specification, identity, output, *, private_directory=None):
     resolution = json.loads((work / "resolution.json").read_text())
     if resolution["status"] != "RESOLVED":
         raise RuntimeError("DEPENDENCY_RESOLUTION_UNCONFIRMED")
-    adapter = ROOT / "src/cove_duckdb/pipeline/environment_adapter.py"
+    adapter = ROOT / "src/colvenna_isle/pipeline/environment_adapter.py"
     if sha(adapter) != policy["adapter_sha256"]:
         raise RuntimeError("ADAPTER_SOURCE_MISMATCH")
     context = output / "context"
     context.mkdir()
-    shutil.copytree(ROOT / "src/cove_duckdb", context / "application/cove_duckdb",
+    shutil.copytree(ROOT / "src/colvenna_isle", context / "application/colvenna_isle",
                     ignore=shutil.ignore_patterns("__pycache__"))
     shutil.copytree(work / "wheels", context / "wheels")
     shutil.copyfile(work / "requirements.lock", context / "requirements.lock")
@@ -220,16 +220,16 @@ def build_images(specification, identity, output, *, private_directory=None):
         environment["profiles"] = profiles(executor, sql)
         (context / "environment.json").write_text(canonical(environment))
         footer = (
-            f'\nLABEL io.cove.source="{policy["source_commit"]}" '
-            f'io.cove.adapter="{policy["adapter_sha256"]}" '
-            f'io.cove.dependency-lock="{resolution["dependency_lock_sha256"]}" '
-            f'io.cove.executor="{executor}"\n')
+            f'\nLABEL io.colvenna.source="{policy["source_commit"]}" '
+            f'io.colvenna.adapter="{policy["adapter_sha256"]}" '
+            f'io.colvenna.dependency-lock="{resolution["dependency_lock_sha256"]}" '
+            f'io.colvenna.executor="{executor}"\n')
         footer += ('ENTRYPOINT ["/lambda-entrypoint.sh"]\n'
-                   'CMD ["cove_duckdb.pipeline.environment_adapter.lambda_handler"]\n'
+                   'CMD ["colvenna_isle.pipeline.environment_adapter.lambda_handler"]\n'
                    if executor == "lambda" else
                    'USER root\nRUN chown 10001:10001 /tmp && chmod 0700 /tmp\n'
                    'VOLUME ["/tmp"]\nUSER 10001:10001\n'
-                   'ENTRYPOINT ["python", "-m", "cove_duckdb.pipeline.environment_adapter"]\nCMD []\n')
+                   'ENTRYPOINT ["python", "-m", "colvenna_isle.pipeline.environment_adapter"]\nCMD []\n')
         (context / ("Dockerfile." + executor)).write_text(dockerfile + footer)
         tag = "colvenna-isle-environment:" + identity + "-" + executor
         stage("IMAGE")
@@ -250,13 +250,13 @@ def build_images(specification, identity, output, *, private_directory=None):
             common += ["--tmpfs", "/tmp:rw,size=128m"]
         common += ["--entrypoint", "python", tag]
         stage("CHECK")
-        run(common + ["-m", "cove_duckdb.pipeline.environment_adapter", "--environment-check"],
+        run(common + ["-m", "colvenna_isle.pipeline.environment_adapter", "--environment-check"],
             output / (executor + "-import.log"), timeout=300)
         check = json.loads((output / (executor + "-import.log")).read_text())
         if (check["status"] != "ENVIRONMENT_IMPORT_AND_CONTRACT_PASS"
                 or check["dependency_lock_sha256"] != resolution["dependency_lock_sha256"]):
             raise RuntimeError("ENVIRONMENT_IMPORT_UNCONFIRMED")
-        run(common + ["-m", "cove_duckdb.contracts", "generate", "--check"],
+        run(common + ["-m", "colvenna_isle.contracts", "generate", "--check"],
             output / (executor + "-contracts.log"))
         run(common + ["-m", "pip", "check"], output / (executor + "-pip-check.log"))
         tags[executor], checks[executor] = tag, check
@@ -369,7 +369,7 @@ def publish_executors(session, specification, identity, tags, output, *, sql=Fal
     auth = ecr.get_authorization_token()["authorizationData"][0]
     user, password = base64.b64decode(auth["authorizationToken"]).decode().split(":", 1)
     images = {}
-    with tempfile.TemporaryDirectory(prefix="cove-environment-docker-") as configuration:
+    with tempfile.TemporaryDirectory(prefix="colvenna-environment-docker-") as configuration:
         environment = dict(os.environ, DOCKER_CONFIG=configuration)
         subprocess.run(["docker", "login", "--username", user, "--password-stdin", auth["proxyEndpoint"]],
                        input=password.encode(), env=environment, check=True,
@@ -410,7 +410,7 @@ def publish_executors(session, specification, identity, tags, output, *, sql=Fal
         containerDefinitions=[{
             "name": "runtime", "image": images["ecs_task"], "essential": True,
             "environment": [{"name": name, "value": REGION} for name in [
-                "COVE_REGION", "AWS_REGION", "AWS_DEFAULT_REGION"]],
+                "COLVENNA_REGION", "AWS_REGION", "AWS_DEFAULT_REGION"]],
             "user": "10001:10001", "readonlyRootFilesystem": True,
             "mountPoints": [{"sourceVolume": "work", "containerPath": "/tmp", "readOnly": False}],
             "logConfiguration": {"logDriver": "awslogs", "options": {
@@ -429,8 +429,8 @@ def main():
     try:
         build()
     except Exception as error:
-        identity = os.environ.get("COVE_ENVIRONMENT_BUILD_ID", "")
-        reference = os.environ.get("COVE_ENVIRONMENT_SPECIFICATION_REF")
+        identity = os.environ.get("COLVENNA_ENVIRONMENT_BUILD_ID", "")
+        reference = os.environ.get("COLVENNA_ENVIRONMENT_SPECIFICATION_REF")
         if re.fullmatch(r"build_[0-9a-f]{32}", identity) and reference:
             # Best effort: the CodeBuild FAILED status remains authoritative.
             try:
@@ -466,14 +466,14 @@ def build():
         if session.client("sts").get_caller_identity()["Account"] != account():
             raise RuntimeError("BUILD_ACCOUNT_MISMATCH")
         s3 = session.client("s3")
-        reference = json.loads(os.environ["COVE_ENVIRONMENT_SPECIFICATION_REF"])
+        reference = json.loads(os.environ["COLVENNA_ENVIRONMENT_SPECIFICATION_REF"])
         content = read_original(s3, reference, 262144)
-        expected = os.environ["COVE_ENVIRONMENT_SPECIFICATION_SHA256"]
+        expected = os.environ["COLVENNA_ENVIRONMENT_SPECIFICATION_SHA256"]
         if hashlib.sha256(content).hexdigest() != expected:
             raise RuntimeError("BUILD_SPECIFICATION_MISMATCH")
         specification = json.loads(content)
         source_manifest = confirm_source(specification["policy"])
-        identity, codebuild_id = os.environ["COVE_ENVIRONMENT_BUILD_ID"], os.environ["CODEBUILD_BUILD_ID"]
+        identity, codebuild_id = os.environ["COLVENNA_ENVIRONMENT_BUILD_ID"], os.environ["CODEBUILD_BUILD_ID"]
         if (not re.fullmatch(r"build_[0-9a-f]{32}", identity)
                 or not codebuild_id.startswith(specification["build_project"] + ":")):
             raise RuntimeError("BUILD_IDENTITY_MISMATCH")

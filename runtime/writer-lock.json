@@ -1,6 +1,6 @@
 {
   "storage_repository": "colvenna-isle-images",
-  "storage_digest": "sha256:8ec8ab61eac30db2e8d0210986ccfa02590e40aa74eda61f5e8775fa747aa3d9",
+  "storage_digest": "sha256:88618d1369854a03c1fafd14690d3aabfaf4af4bd52a557097ace24e846b45c4",
   "architecture": "arm64",
   "credential_provider": "container-role",
   "native_secret_provider": "credential_chain",

@@ -9,11 +9,11 @@ import json
 import re
 import unittest
 
-from cove_duckdb.control.audit import Audit
-from cove_duckdb.control.quotas import Quotas
-from cove_duckdb.control.registry import ControlError, Principal
-from cove_duckdb.control.runs import Runs
-from cove_duckdb.pipeline.task_objects import TaskObjects
+from colvenna_isle.control.audit import Audit
+from colvenna_isle.control.quotas import Quotas
+from colvenna_isle.control.registry import ControlError, Principal
+from colvenna_isle.control.runs import Runs
+from colvenna_isle.pipeline.task_objects import TaskObjects
 from test_runs import RunControllerTests
 
 

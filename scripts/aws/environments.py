@@ -154,7 +154,7 @@ def main():
     body = json.dumps(template(values, binding, policy, stack_name, account=ACCOUNT), separators=(",", ":"))
     (directory / "template.json").write_text(body + "\n")
     (directory / "validation.json").write_text(encode(cf.validate_template(**template_arguments(current, body))))
-    token = "cove-environments-" + uuid.uuid4().hex
+    token = "colvenna-environments-" + uuid.uuid4().hex
     (directory / "admission.json").write_text(encode({
         "stack": stack_name, "source_commit": head, "artifact": binding,
         "baseline_stack_id": baseline["StackId"], "client_request_token": token,

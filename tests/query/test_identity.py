@@ -4,8 +4,8 @@ import json
 import unittest
 from dataclasses import replace
 
-from cove_duckdb.control.registry import ControlError, Principal
-from cove_duckdb.query.service import IDENTITY_HEADERS, Service, verified_principal
+from colvenna_isle.control.registry import ControlError, Principal
+from colvenna_isle.query.service import IDENTITY_HEADERS, Service, verified_principal
 
 ACTOR = Principal("reader", frozenset(["space_a"]), frozenset(["query:read"]),
                   "key_reader", "gen_" + "1" * 32, "2099-01-01T00:00:00Z")
@@ -70,7 +70,7 @@ class QueryIdentity(unittest.TestCase):
 
     def test_malformed_context_is_denied_without_configuration_read(self):
         for value in ['null', '{}', '["space_a", 1]', 'not-json']:
-            self.denied(supplied={**headers(), "x-cove-spaces": value})
+            self.denied(supplied={**headers(), "x-colvenna-spaces": value})
         self.assertEqual(self.registry.reads, [])
 
     def test_wrong_space_does_not_read_the_other_space(self):

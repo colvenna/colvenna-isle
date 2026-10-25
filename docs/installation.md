@@ -1,6 +1,6 @@
 # Colvenna Isle 安装部署手册
 
-本手册适用于当前未发行的 `1.2.0.dev0` 候选，面向在自己的 AWS 账号和商业区域（partition `aws`）中安装和运维 Colvenna Isle 的运维人员。改名后的 AWS 安装验收为 `NOT_RUN`；1.1.0 的历史验收不代表当前候选通过。涵盖以下内容：
+本手册适用于当前未发行的 `2.0.0.dev0` 候选，面向在自己的 AWS 账号和商业区域（partition `aws`）中安装和运维 Colvenna Isle 的运维人员。改名后的 AWS 安装验收按确切源码与制品摘要单独记录，见 [PR #23](https://github.com/colvenna/colvenna-isle/pull/23)；1.1.0 的历史验收不代表当前候选通过。涵盖以下内容：
 
 - 准备部署主机与原生存储镜像；
 - 构建 release；
@@ -47,10 +47,10 @@ git checkout --detach <已审查的候选提交>
 
 ## 1. 支持范围
 
-| 维度 | 1.1.0 |
+| 维度 | 当前候选的配置范围（1.1.0 验收为历史） |
 | --- | --- |
-| AWS 账号 | 任意单个账号。账号 ID 不写在源码中：服务由栈注入 `COVE_ACCOUNT`，运维工具以 `COVE_ACCOUNT` 为准，并与当前凭证核对 |
-| 区域 | 按显式配置（`--region` / `COVE_REGION` / `AWS_REGION`）部署到标准商业分区 `aws`。`us-east-2` 已完成全部功能验收，`us-west-2` 已完成回归；其他商业区域未单独验收。验收源码与范围见[发行说明](release-notes.md#验收)。tag `v1.0.0` 只支持 `us-west-2` |
+| AWS 账号 | 任意单个账号。账号 ID 不写在源码中：服务由栈注入 `COLVENNA_ACCOUNT`，运维工具以 `COLVENNA_ACCOUNT` 为准，并与当前凭证核对 |
+| 区域 | 按显式配置（`--region` / `COLVENNA_REGION` / `AWS_REGION`）部署到标准商业分区 `aws`。`us-east-2` 已完成全部功能验收，`us-west-2` 已完成回归；其他商业区域未单独验收。验收源码与范围见[发行说明](release-notes.md#验收)。tag `v1.0.0` 只支持 `us-west-2` |
 | CPU 架构 | ARM64（Graviton）：写者、查询、计算 Task、Lambda、运行环境构建都只构建 ARM64 |
 | 规格 | 写者与查询服务各为 ECS Fargate 2 vCPU / 4 GiB，见[发行说明](release-notes.md#规格) |
 
@@ -60,7 +60,7 @@ git checkout --detach <已审查的候选提交>
 
 ## 2. 部署组成
 
-每套环境由一组 CloudFormation 栈组成，用环境名 `COVE_ENVIRONMENT` 和区域 `COVE_REGION` 选择：
+每套环境由一组 CloudFormation 栈组成，用环境名 `COLVENNA_ENVIRONMENT` 和区域 `COLVENNA_REGION` 选择：
 
 | 栈 | 内容 | 名称（环境 `<name>`） |
 | --- | --- | --- |
@@ -73,7 +73,7 @@ git checkout --detach <已审查的候选提交>
 - **备份库**：每个目标区域各自的 `colvenna-isle-backups` 栈中的版本化 S3 桶，删除环境时保留。
 - **镜像仓库**：ECR `colvenna-isle-images`，存放原生存储镜像、写者与查询镜像，以及运行环境镜像。
 
-环境名为 2–12 位小写字母或数字，以字母开头；`env`、`core`、`control`、`builder` 保留不可用。所有运维工具都要求显式设置 `COVE_ENVIRONMENT`，未设置时拒绝执行。每个栈都带有标签 `Project=colvenna-isle` 与 `Component=core|control|builder`。
+环境名为 2–12 位小写字母或数字，以字母开头；`env`、`core`、`control`、`builder` 保留不可用。所有运维工具都要求显式设置 `COLVENNA_ENVIRONMENT`，未设置时拒绝执行。每个栈都带有标签 `Project=colvenna-isle` 与 `Component=core|control|builder`。
 
 同一账号可以在不同区域安装多套环境，它们之间相互隔离：
 
@@ -93,18 +93,18 @@ git checkout --detach <已审查的候选提交>
 
 ### 3.2 环境变量
 
-所有运维命令都在下面的环境中执行。下文用 `$COVE` 代表这一前缀：
+所有运维命令都在下面的环境中执行。下文用 `$COLVENNA` 代表这一前缀：
 
 ```bash
-export COVE_ACCOUNT=<12 位账号 ID>          # 要操作的账号，工具会与当前凭证核对
-export COVE_REGION=<目标商业区域>
-export AWS_REGION="$COVE_REGION" AWS_DEFAULT_REGION="$COVE_REGION"
-export COVE="/usr/bin/env -u AWS_PROFILE -u AWS_DEFAULT_PROFILE COVE_ENVIRONMENT=<name>"
+export COLVENNA_ACCOUNT=<12 位账号 ID>          # 要操作的账号，工具会与当前凭证核对
+export COLVENNA_REGION=<目标商业区域>
+export AWS_REGION="$COLVENNA_REGION" AWS_DEFAULT_REGION="$COLVENNA_REGION"
+export COLVENNA="/usr/bin/env -u AWS_PROFILE -u AWS_DEFAULT_PROFILE COLVENNA_ENVIRONMENT=<name>"
 ```
 
 - `-u AWS_PROFILE`：确保使用实例角色凭证链。
-- `COVE_ACCOUNT` 与当前凭证的账号不一致时，工具拒绝执行。
-- `COVE_REGION`、`AWS_REGION`、`AWS_DEFAULT_REGION` 中至少一个必须显式设置；设置多个时必须一致，否则在 AWS 调用前拒绝。`install.sh --region` 也必须与已设置的值一致。AWS 凭证属于账号，不绑定某个区域；工具核对凭证账号、SDK 目标区域与被操作栈 ARN 的区域，不推断凭证有独立的区域属性。
+- `COLVENNA_ACCOUNT` 与当前凭证的账号不一致时，工具拒绝执行。
+- `COLVENNA_REGION`、`AWS_REGION`、`AWS_DEFAULT_REGION` 中至少一个必须显式设置；设置多个时必须一致，否则在 AWS 调用前拒绝。`install.sh --region` 也必须与已设置的值一致。AWS 凭证属于账号，不绑定某个区域；工具核对凭证账号、SDK 目标区域与被操作栈 ARN 的区域，不推断凭证有独立的区域属性。
 
 ### 3.3 区域前置条件
 
@@ -117,8 +117,8 @@ export COVE="/usr/bin/env -u AWS_PROFILE -u AWS_DEFAULT_PROFILE COVE_ENVIRONMENT
 ### 3.4 构建环境
 
 ```bash
-python3 -m venv /tmp/cove-build
-/tmp/cove-build/bin/python -m pip install --require-hashes --only-binary=:all: \
+python3 -m venv /tmp/colvenna-build
+/tmp/colvenna-build/bin/python -m pip install --require-hashes --only-binary=:all: \
   -r runtime/contracts-requirements.lock -r runtime/aws-requirements.lock -r runtime/build-requirements.lock \
   -r examples/orders/requirements.lock
 ```
@@ -131,15 +131,16 @@ python3 -m venv /tmp/cove-build
 
 ```json
 "storage_repository": "colvenna-isle-images",
-"storage_digest": "sha256:8ec8ab61…"
+"storage_digest": "sha256:88618d13…"
 ```
 
 构建 release 时，这个镜像必须已经发布在本账号的 ECR 中，并且已经拉取到构建主机：
 
 ```bash
-aws ecr get-login-password --region "$COVE_REGION" | \
-  docker login --username AWS --password-stdin $COVE_ACCOUNT.dkr.ecr.$COVE_REGION.amazonaws.com
-docker pull $COVE_ACCOUNT.dkr.ecr.$COVE_REGION.amazonaws.com/colvenna-isle-images@sha256:8ec8ab61…
+aws ecr get-login-password --region "$COLVENNA_REGION" | \
+  docker login --username AWS --password-stdin $COLVENNA_ACCOUNT.dkr.ecr.$COLVENNA_REGION.amazonaws.com
+STORAGE_DIGEST=$(python3 -c 'import json; print(json.load(open("runtime/writer-lock.json"))["storage_digest"])')
+docker pull "$COLVENNA_ACCOUNT.dkr.ecr.$COLVENNA_REGION.amazonaws.com/colvenna-isle-images@$STORAGE_DIGEST"
 ```
 
 账号中还没有这个镜像时，先从固定的上游源码构建并发布：
@@ -156,7 +157,7 @@ docker pull $COVE_ACCOUNT.dkr.ecr.$COVE_REGION.amazonaws.com/colvenna-isle-image
 3. 生成带存储镜像身份的开发 bundle：
 
    ```bash
-   /tmp/cove-build/bin/python scripts/build_release.py --output /path/outside/repo/storage-bundle \
+   /tmp/colvenna-build/bin/python scripts/build_release.py --output /path/outside/repo/storage-bundle \
      --storage-receipt /path/outside/repo/storage-build/build-receipt.json --storage-image <本地镜像 tag>
    ```
 
@@ -165,7 +166,7 @@ docker pull $COVE_ACCOUNT.dkr.ecr.$COVE_REGION.amazonaws.com/colvenna-isle-image
 4. 发布到本账号 ECR（不可变 tag）：
 
    ```bash
-   $COVE /tmp/cove-build/bin/python scripts/aws/manage.py publish --bundle /path/outside/repo/storage-bundle \
+   $COLVENNA /tmp/colvenna-build/bin/python scripts/aws/manage.py publish --bundle /path/outside/repo/storage-bundle \
      --output /path/outside/repo/receipts/storage-publish
    ```
 
@@ -183,7 +184,7 @@ docker pull $COVE_ACCOUNT.dkr.ecr.$COVE_REGION.amazonaws.com/colvenna-isle-image
 ```bash
 git clone https://github.com/colvenna/colvenna-isle.git && cd colvenna-isle
 git checkout --detach <已审查的候选提交>
-COVE_ACCOUNT=$COVE_ACCOUNT /tmp/cove-build/bin/python scripts/build_product.py --output /path/outside/repo/release-candidate
+COLVENNA_ACCOUNT=$COLVENNA_ACCOUNT /tmp/colvenna-build/bin/python scripts/build_product.py --output /path/outside/repo/release-candidate
 ```
 
 `build_product.py` 只接受干净的工作区，依次构建并测试：
@@ -202,7 +203,7 @@ release 目录中的 `manifest.json` 记录以下内容，任何一项失败都�
 - 镜像 ID；
 - 存储镜像的仓库名与 digest。
 
-`COVE_ACCOUNT` 只用于在本机找到存储镜像。套件本身使用固定的测试账号 `123456789012`，不访问 AWS。
+`COLVENNA_ACCOUNT` 只用于在本机找到存储镜像。套件本身使用固定的测试账号 `123456789012`，不访问 AWS。
 
 1.1.0 的写者和查询镜像都安装 hash 锁定的 pyarrow 24.0.0；查询镜像用它批量装载写者提供的快照，构建时核对版本和原生类型测试，见[发行说明](release-notes.md#110-的变更)。
 
@@ -211,7 +212,7 @@ release 目录中的 `manifest.json` 记录以下内容，任何一项失败都�
 安装工具要求当前工作区是 release 对应的同一个干净提交：
 
 ```bash
-$COVE /tmp/cove-build/bin/python scripts/aws/install.py fresh \
+$COLVENNA /tmp/colvenna-build/bin/python scripts/aws/install.py fresh \
   --release /path/outside/repo/release-candidate --output /path/outside/repo/receipts/install-<name>
 ```
 
@@ -235,7 +236,7 @@ $COVE /tmp/cove-build/bin/python scripts/aws/install.py fresh \
 全新安装通常需要约 25 分钟。完成后读取基线栈的输出：
 
 ```bash
-aws cloudformation describe-stacks --region "$COVE_REGION" --stack-name colvenna-isle-<name>-core \
+aws cloudformation describe-stacks --region "$COLVENNA_REGION" --stack-name colvenna-isle-<name>-core \
   --query "Stacks[0].Outputs[?OutputKey=='ApiUrl' || OutputKey=='WebUrl']"
 ```
 
@@ -252,7 +253,7 @@ aws cloudformation describe-stacks --region "$COVE_REGION" --stack-name colvenna
 2. 再写入一个**新的**回执目录，用 `--steps` 从该步继续：
 
 ```bash
-$COVE /tmp/cove-build/bin/python scripts/aws/install.py fresh --release <release> \
+$COLVENNA /tmp/colvenna-build/bin/python scripts/aws/install.py fresh --release <release> \
   --output /path/outside/repo/receipts/install-<name>-resume --steps writer,control-registry,intake,query,sync,editor,open
 ```
 
@@ -269,9 +270,9 @@ control 与 writer 需要 environments 步骤输出的构建器配置。所以�
 空间是数据与权限的隔离单位。运维开通空间，并为它签发首个管理员 Key。这个 Key 只能签发一次：
 
 ```bash
-$COVE /tmp/cove-build/bin/python scripts/aws/control.py provision --space <space> \
+$COLVENNA /tmp/colvenna-build/bin/python scripts/aws/control.py provision --space <space> \
   --output /path/outside/repo/receipts/provision-<space>
-$COVE /tmp/cove-build/bin/python scripts/aws/control.py bootstrap-key --space <space> \
+$COLVENNA /tmp/colvenna-build/bin/python scripts/aws/control.py bootstrap-key --space <space> \
   --expires-at 2027-12-31T00:00:00Z --token-output /secure/path/<space>-admin.token \
   --output /path/outside/repo/receipts/bootstrap-<space>
 ```
@@ -284,7 +285,7 @@ $COVE /tmp/cove-build/bin/python scripts/aws/control.py bootstrap-key --space <s
 空间配额由运维设置：
 
 ```bash
-$COVE /tmp/cove-build/bin/python scripts/aws/control.py quota --space <space> --policy-file quota.json \
+$COLVENNA /tmp/colvenna-build/bin/python scripts/aws/control.py quota --space <space> --policy-file quota.json \
   --output /path/outside/repo/receipts/quota-<space>
 ```
 
@@ -305,30 +306,32 @@ python3 -m venv /tmp/quickstart && /tmp/quickstart/bin/python -m pip install PyY
 ## 9. 开放、关闭与计时
 
 ```bash
-$COVE /tmp/cove-build/bin/python scripts/aws/admission.py close --output <new-dir>
-$COVE /tmp/cove-build/bin/python scripts/aws/admission.py open --output <new-dir> [--query-count 1|2]
-$COVE /tmp/cove-build/bin/python scripts/aws/admission.py timing --timing on|off --output <new-dir>
+$COLVENNA /tmp/colvenna-build/bin/python scripts/aws/admission.py close --output <new-dir>
+$COLVENNA /tmp/colvenna-build/bin/python scripts/aws/admission.py open --output <new-dir> [--query-count 1|2]
+$COLVENNA /tmp/colvenna-build/bin/python scripts/aws/admission.py timing --timing on|off --output <new-dir>
 ```
 
 | 操作 | 作用 |
 | --- | --- |
 | `close` | 停止写者（取得原任务的 STOPPED 终止回执）、把查询服务缩到 0，并关闭接入与同步写。每次升级、重建或部署写者之前都要先 close |
 | `open` | 要求全部组件同源、认证已启用，然后开放 |
-| `timing` | 只能在关闭状态下切换分段计时日志（`COVE_TIMING`），用于测量计时开销 |
+| `timing` | 只能在关闭状态下切换分段计时日志（`COLVENNA_TIMING`），用于测量计时开销 |
 
 部署写者时，接入队列与 DLQ 都必须为空。仍有排队的原件时，先开放让写者处理完，或者按原身份核对后再处置。部署工具不会越过未核对的工作。
 
 ## 10. 破坏性升级
 
-从 1.1.0 或更早版本采用新品牌时，先使用对应旧 tag 的工具关闭、备份并卸载旧环境；新工具的资源名与 `Project` 标签已变，不能发现或清理旧环境。保留旧备份库，勿把它当作新版本的备份库，也不支持跨产品版本直接还原。再用已审查的新源码全新安装并重新导入业务数据。原生存储镜像的 digest 未变，但安装前需由运维人员将同一镜像发布到新 ECR 仓库 `colvenna-isle-images`；本次改名不会操作线上资源。`upgrade` 仅适用于新命名空间内部的源码升级。
+2.0.0 的 Python、配置、协议与系统列改名是大版本破坏性升级，契约 revision 为 2、原生空间格式为 6，旧名称不再作为别名接受。执行前按[迁移设计](design/identifier-migration.md)停止生产者与调度、核对 UNKNOWN，在旧服务仍运行时用旧 tag 的工具创建并核对一致性备份；从校验后的原生备份 Parquet 提取完整 ODS 事件（包括删除 tombstone）和 direct 业务行，核对类型与行数并生成受保护的重放计划。然后用旧 tag 的工具关闭、卸载旧运行时，保留历史备份库。用新源码全新安装、注册数据集、重放 ODS 与 direct 业务数据、重新发布并全量重建流水线和键状态。新系统列由写者重新生成，旧回执与水位不沿用。旧原生备份只能按旧版本隔离还原，不能直接还原到格式 6。
+
+新工具不能发现或清理旧资源名与旧标签。存储镜像因 `/opt/colvenna` 路径变更更新了 digest；不能仅复制旧镜像并沿用旧 digest，需将新锁定镜像发布到目标账号与区域的 `colvenna-isle-images`。本地构建可用 `build_product.py --storage-image <local-image-reference>` 验证尚未发布的镜像，仍必须匹配锁定的 image ID / ARM64。`upgrade` 只适用于同命名空间、同契约与原生格式内的源码升级；跨格式必须使用上述导出 / 重建路径。
 
 1.1.0 的区域化改变了运行时 IAM 命名空间。已有 tag `v1.0.0` 环境需先用该版本的工具备份并卸载，再用 1.1.0 全新安装，按当前合同重新生成数据。下面的 `upgrade` 流程用于运行时命名空间相同的源码版本之间升级。
 
-各版本不提供向后兼容、旧数据自动迁移或零停机升级。升级步骤：
+各版本不提供向后兼容、原地自动迁移或零停机升级。2.0.0 的离线业务数据重放不迁移内部账本。升级步骤：
 
 ```bash
 # 在新版本的干净检出中构建新 release（第 5 节），然后：
-$COVE /tmp/cove-build/bin/python scripts/aws/install.py upgrade --release <new-release> --output <new-dir>
+$COLVENNA /tmp/colvenna-build/bin/python scripts/aws/install.py upgrade --release <new-release> --output <new-dir>
 ```
 
 `upgrade` 的步骤为：close → vault → environments → writer → control → auth → intake → query → sync → editor → open。
@@ -337,7 +340,7 @@ $COVE /tmp/cove-build/bin/python scripts/aws/install.py upgrade --release <new-r
 - 合同或存储格式有变化时，按空间重建，旧数据不迁移，需要用当前版本重新生成：
 
   ```bash
-  $COVE /tmp/cove-build/bin/python scripts/aws/control.py rebuild --space <space> --output <new-dir>
+  $COLVENNA /tmp/colvenna-build/bin/python scripts/aws/control.py rebuild --space <space> --output <new-dir>
   ```
 
   重建后：
@@ -349,7 +352,7 @@ $COVE /tmp/cove-build/bin/python scripts/aws/install.py upgrade --release <new-r
   1. 先只生成清理计划：
 
      ```bash
-     $COVE /tmp/cove-build/bin/python scripts/aws/control.py purge-generation --space <space> --generation <old> --output <new-dir>
+     $COLVENNA /tmp/colvenna-build/bin/python scripts/aws/control.py purge-generation --space <space> --generation <old> --output <new-dir>
      ```
 
   2. 核对计划无误后，加 `--execute` 执行删除。
@@ -361,7 +364,7 @@ $COVE /tmp/cove-build/bin/python scripts/aws/install.py upgrade --release <new-r
 ### 11.1 备份
 
 ```bash
-$COVE /tmp/cove-build/bin/python scripts/aws/backup.py create --space <space> \
+$COLVENNA /tmp/colvenna-build/bin/python scripts/aws/backup.py create --space <space> \
   --token-file /secure/path/<backup-key>.token --output <new-dir>
 ```
 
@@ -383,7 +386,7 @@ $COVE /tmp/cove-build/bin/python scripts/aws/backup.py create --space <space> \
 核对一个备份及其引用的全部对象：
 
 ```bash
-$COVE /tmp/cove-build/bin/python scripts/aws/backup.py inspect \
+$COLVENNA /tmp/colvenna-build/bin/python scripts/aws/backup.py inspect \
   --backup-uri s3://<vault>/backups/<space>/<gen>/<backup_id>/backup.json --version-id <version> --output <new-dir>
 ```
 
@@ -395,8 +398,8 @@ $COVE /tmp/cove-build/bin/python scripts/aws/backup.py inspect \
 - 该空间在目标环境中尚不存在。
 
 ```bash
-/usr/bin/env -u AWS_PROFILE -u AWS_DEFAULT_PROFILE COVE_REGION=$COVE_REGION AWS_REGION=$COVE_REGION AWS_DEFAULT_REGION=$COVE_REGION COVE_ENVIRONMENT=<target> \
-  /tmp/cove-build/bin/python scripts/aws/backup.py restore \
+/usr/bin/env -u AWS_PROFILE -u AWS_DEFAULT_PROFILE COLVENNA_REGION=$COLVENNA_REGION AWS_REGION=$COLVENNA_REGION AWS_DEFAULT_REGION=$COLVENNA_REGION COLVENNA_ENVIRONMENT=<target> \
+  /tmp/colvenna-build/bin/python scripts/aws/backup.py restore \
   --backup-uri s3://<vault>/backups/<space>/<gen>/<backup_id>/backup.json --version-id <version> \
   --token-output /secure/path/<space>-restored-admin.token --output <new-dir> [--schedules restore]
 ```
@@ -426,7 +429,7 @@ $COVE /tmp/cove-build/bin/python scripts/aws/backup.py inspect \
 ## 12. 卸载
 
 ```bash
-$COVE /tmp/cove-build/bin/python scripts/aws/uninstall.py --output <new-dir>
+$COLVENNA /tmp/colvenna-build/bin/python scripts/aws/uninstall.py --output <new-dir>
 ```
 
 卸载按以下顺序执行：
@@ -442,7 +445,7 @@ $COVE /tmp/cove-build/bin/python scripts/aws/uninstall.py --output <new-dir>
 
 ## 13. 安全要点
 
-- 不使用静态 Access Key。服务使用各自的最小权限角色；运维工具要求 EC2 实例角色，并核对 `COVE_ACCOUNT`。
+- 不使用静态 Access Key。服务使用各自的最小权限角色；运维工具要求 EC2 实例角色，并核对 `COLVENNA_ACCOUNT`。
 - 数据桶与备份库：
   - 开启版本控制、SSE-S3、BucketOwnerEnforced 与全部 Public Access Block；
   - 拒绝非 TLS 访问。
@@ -457,7 +460,7 @@ $COVE /tmp/cove-build/bin/python scripts/aws/uninstall.py --output <new-dir>
 
 | 现象 | 原因与处理 |
 | --- | --- |
-| `Set COVE_ACCOUNT …` / `Expected an assumed role in COVE_ACCOUNT` | 没有设置 `COVE_ACCOUNT`，或当前凭证不是该账号的实例角色。检查第 3.2 节的环境 |
+| `Set COLVENNA_ACCOUNT …` / `Expected an assumed role in COLVENNA_ACCOUNT` | 没有设置 `COLVENNA_ACCOUNT`，或当前凭证不是该账号的实例角色。检查第 3.2 节的环境 |
 | `Use the EC2 role credential chain; no static keys` | 环境中存在 profile 或静态 key，用 `/usr/bin/env -u AWS_PROFILE …` 执行 |
 | 构建报 `docker image inspect` 失败 | 构建主机上没有锁定的存储镜像，见第 4 节 |
 | 写者部署拒绝：队列或 DLQ 非空 | 先开放让写者处理完排队的原件，或按原身份核对后再处置 |

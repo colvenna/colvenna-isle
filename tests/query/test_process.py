@@ -11,8 +11,8 @@ import time
 import unittest
 from pathlib import Path
 
-from cove_duckdb.control.registry import ControlError
-from cove_duckdb.query.process import run
+from colvenna_isle.control.registry import ControlError
+from colvenna_isle.query.process import run
 
 
 class ProcessBoundary(unittest.TestCase):
@@ -98,7 +98,7 @@ class ProcessBoundary(unittest.TestCase):
 
     def test_parent_death_kills_the_original_native_child(self):
         directory = self.root / "owned"
-        code = ("from cove_duckdb.query.process import run; import sys; run("
+        code = ("from colvenna_isle.query.process import run; import sys; run("
                 "[sys.executable,'-c','import time; time.sleep(60)'],"
                 + repr(str(directory)) + ",timeout=30)")
         parent = subprocess.Popen([sys.executable, "-c", code])

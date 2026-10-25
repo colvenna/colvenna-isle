@@ -14,17 +14,17 @@ from unittest.mock import ANY
 
 from botocore.exceptions import ClientError
 
-from cove_duckdb.contracts.model import KEY_STATE_METADATA
-from cove_duckdb.control.dispatch import DispatchUnknown, token
-from cove_duckdb.control.environments import Environments
-from cove_duckdb.control.pipeline_artifacts import PipelineArtifacts, checksum
-from cove_duckdb.control.pipelines import Pipelines
-from cove_duckdb.control.registry import ControlError, Principal, Registry, canonical
-from cove_duckdb.control.runs import Runs
-from cove_duckdb.control.scheduler import Scheduler, parse_notification, window
-from cove_duckdb.control.writer_client import WriterUnknown
-from cove_duckdb.pipeline.task_descriptor import digest
-from cove_duckdb.pipeline.task_objects import TaskObjects
+from colvenna_isle.contracts.model import KEY_STATE_METADATA
+from colvenna_isle.control.dispatch import DispatchUnknown, token
+from colvenna_isle.control.environments import Environments
+from colvenna_isle.control.pipeline_artifacts import PipelineArtifacts, checksum
+from colvenna_isle.control.pipelines import Pipelines
+from colvenna_isle.control.registry import ControlError, Principal, Registry, canonical
+from colvenna_isle.control.runs import Runs
+from colvenna_isle.control.scheduler import Scheduler, parse_notification, window
+from colvenna_isle.control.writer_client import WriterUnknown
+from colvenna_isle.pipeline.task_descriptor import digest
+from colvenna_isle.pipeline.task_objects import TaskObjects
 from test_environments import Artifacts, Builds, Table, specification
 from test_pipelines import Objects
 
@@ -38,8 +38,8 @@ DAILY = [{"name": "order_date", "type": "DATE", "nullable": False},
          {"name": "revenue", "type": "DECIMAL(38,2)", "nullable": False}]
 SUMMARY = [{"name": "metric", "type": "VARCHAR", "nullable": False},
            {"name": "value", "type": "DECIMAL(38,2)", "nullable": False}]
-METADATA = [{"name": "_cove_version", "type": "BIGINT", "nullable": False},
-            {"name": "_cove_sequence", "type": "BIGINT", "nullable": False}]
+METADATA = [{"name": "_colvenna_version", "type": "BIGINT", "nullable": False},
+            {"name": "_colvenna_sequence", "type": "BIGINT", "nullable": False}]
 
 
 class RunTable(Table):
@@ -234,7 +234,7 @@ class Writer:
                 version["state_release_id"] = binding["release_id"]
             schema = [{"name": "id", "type": "BIGINT", "nullable": False}]
             manifest[alias] = {"selection": binding["selection"], "native_version": version, "manifest": {
-                "contract_version": 1, "dataset": binding["dataset"],
+                "contract_version": 2, "dataset": binding["dataset"],
                 "release_id": "input_" + digest([identity, alias])[:40], "watermark": {"ods_sequence":
                     version["commit_sequence"]}, "schema": schema,
                 "files": [{"s3_uri": f"s3://test-bucket/spaces/space_one/inputs/{self.test.generation}/"
@@ -635,12 +635,12 @@ class RunControllerTests(unittest.TestCase):
         self.now += 421
         self.assertEqual(self.drive(second)["status"], "PUBLISHED")
 
-    def test_cove_schedule_triggers_once_per_window_only_with_new_data_and_pause_stops_new_runs(self):
+    def test_colvenna_schedule_triggers_once_per_window_only_with_new_data_and_pause_stops_new_runs(self):
         metadata = self.pipelines.get(self.owner, "space_one", "orders")
         metadata = self.pipelines.activate(self.owner, "space_one", "orders", {"pipeline_version": self.version},
                                            '"' + metadata["revision"] + '"')
         enabled = self.pipelines.schedule(self.owner, "space_one", "orders", {
-            "owner": "cove", "expression": "rate(1 minute)", "timezone": "UTC", "state": "ENABLED"},
+            "owner": "colvenna", "expression": "rate(1 minute)", "timezone": "UTC", "state": "ENABLED"},
             '"' + metadata["revision"] + '"')
         scheduler = Scheduler(self.runs, self.keys, clock=lambda: self.now)
         self.writer.ingest(2)

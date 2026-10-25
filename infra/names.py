@@ -1,6 +1,6 @@
 """Stack and runtime resource names of one Colvenna Isle deployment environment.
 
-Every environment is an independent installation named by COVE_ENVIRONMENT: its stacks and the runtime
+Every environment is an independent installation named by COLVENNA_ENVIRONMENT: its stacks and the runtime
 resources its environment builder creates never share a name or an IAM wildcard with another environment.
 """
 
@@ -8,15 +8,15 @@ import os
 import re
 import hashlib
 
-from cove_duckdb.region import region
+from colvenna_isle.region import region
 
 RESERVED = {"env", "core", "control", "builder"}
 
 
 def environment_name(value=None):
-    name = value or os.environ.get("COVE_ENVIRONMENT", "")
+    name = value or os.environ.get("COLVENNA_ENVIRONMENT", "")
     if not re.fullmatch(r"[a-z][a-z0-9]{1,11}", name) or name in RESERVED:
-        raise RuntimeError("Set COVE_ENVIRONMENT to 2-12 lowercase letters/digits (not env, core, control or builder)")
+        raise RuntimeError("Set COLVENNA_ENVIRONMENT to 2-12 lowercase letters/digits (not env, core, control or builder)")
     return name
 
 

@@ -9,10 +9,10 @@ from pathlib import Path
 import duckdb
 import pyarrow.parquet as pq
 
-from cove_duckdb.control.registry import ControlError
-from cove_duckdb.pipeline.native_inputs import capture
-from cove_duckdb.writer.ingestion import IngestionStore, digest
-from cove_duckdb.writer.writes import WriteStore, write_id
+from colvenna_isle.control.registry import ControlError
+from colvenna_isle.pipeline.native_inputs import capture
+from colvenna_isle.writer.ingestion import IngestionStore, digest
+from colvenna_isle.writer.writes import WriteStore, write_id
 
 
 class NativeExports(unittest.TestCase):

@@ -6,10 +6,10 @@ import unittest
 
 from botocore.exceptions import BotoCoreError
 
-from cove_duckdb.control.handler import handle
-from cove_duckdb.control.registry import ControlError, Registry
-from cove_duckdb.control.status import Projection, Status
-from cove_duckdb.contracts.validation import validate
+from colvenna_isle.control.handler import handle
+from colvenna_isle.control.registry import ControlError, Registry
+from colvenna_isle.control.status import Projection, Status
+from colvenna_isle.contracts.validation import validate
 
 
 INGESTION = "ing_" + "a" * 64

@@ -8,9 +8,9 @@ import time
 import unittest
 from unittest.mock import patch
 
-from cove_duckdb.control.registry import ControlError
-from cove_duckdb.contracts.validation import validate
-from cove_duckdb.query.runtime import Server
+from colvenna_isle.control.registry import ControlError
+from colvenna_isle.contracts.validation import validate
+from colvenna_isle.query.runtime import Server
 
 
 class Backend:
@@ -26,7 +26,7 @@ class Transport(unittest.TestCase):
     def setUp(self):
         self.backend = Backend()
         self.events = []
-        self.timeout = patch("cove_duckdb.query.runtime.SOCKET_TIMEOUT", 0.2)
+        self.timeout = patch("colvenna_isle.query.runtime.SOCKET_TIMEOUT", 0.2)
         self.timeout.start()
         self.server = Server(("127.0.0.1", 0), self.backend, source_commit="1" * 40,
                              emit=self.events.append)
@@ -55,9 +55,9 @@ class Transport(unittest.TestCase):
             b'{"sql":"SELECT secret_customer_data"}', {"authorization": "Bearer super_secret"})
         self.assertEqual(status, 403)
         validate("error", value)
-        self.assertEqual(value["request_id"], headers["X-Cove-Request-Id"])
-        self.assertEqual(headers["X-Cove-Source-Commit"], "1" * 40)
-        self.assertEqual(headers["X-Cove-Instance-Id"], self.server.instance_id)
+        self.assertEqual(value["request_id"], headers["X-Colvenna-Request-Id"])
+        self.assertEqual(headers["X-Colvenna-Source-Commit"], "1" * 40)
+        self.assertEqual(headers["X-Colvenna-Instance-Id"], self.server.instance_id)
         # The server records completion after it has written the response; wait for that event.
         deadline = time.monotonic() + 2
         while True:
@@ -76,8 +76,8 @@ class Transport(unittest.TestCase):
         client = http.client.HTTPConnection(*self.server.server_address, timeout=3)
         try:
             client.putrequest("GET", "/v1/spaces/a/catalog")
-            client.putheader("X-Cove-Principal-Id", "alice")
-            client.putheader("x-cove-principal-id", "bob")
+            client.putheader("X-Colvenna-Principal-Id", "alice")
+            client.putheader("x-colvenna-principal-id", "bob")
             client.endheaders()
             result = client.getresponse()
             self.assertEqual(result.status, 400)

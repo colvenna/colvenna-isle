@@ -9,8 +9,8 @@ import unittest
 
 from botocore.exceptions import ClientError
 
-from cove_duckdb.control.environment_artifacts import EnvironmentArtifacts
-from cove_duckdb.control.registry import ControlError, canonical
+from colvenna_isle.control.environment_artifacts import EnvironmentArtifacts
+from colvenna_isle.control.registry import ControlError, canonical
 
 ACCOUNT = "123456789012"
 BUCKET = "test-bucket"
@@ -69,13 +69,13 @@ class Images:
                 "architecture": "arm64", "os": "linux", "config": {
                     "User": "10001:10001", "Env": [],
                     "Entrypoint": ["/lambda-entrypoint.sh"] if executor == "lambda"
-                                  else ["python", "-m", "cove_duckdb.pipeline.environment_adapter"],
-                    "Cmd": ["cove_duckdb.pipeline.environment_adapter.lambda_handler"]
+                                  else ["python", "-m", "colvenna_isle.pipeline.environment_adapter"],
+                    "Cmd": ["colvenna_isle.pipeline.environment_adapter.lambda_handler"]
                            if executor == "lambda" else [],
                     "Labels": {
-                        "io.cove.source": "d" * 40, "io.cove.adapter": "e" * 64,
-                        "io.cove.dependency-lock": hashlib.sha256(lock).hexdigest(),
-                        "io.cove.executor": executor,
+                        "io.colvenna.source": "d" * 40, "io.colvenna.adapter": "e" * 64,
+                        "io.colvenna.dependency-lock": hashlib.sha256(lock).hexdigest(),
+                        "io.colvenna.executor": executor,
                     }}}).encode()
             config_sha = "sha256:" + hashlib.sha256(configuration).hexdigest()
             manifest = canonical({"schemaVersion": 2, "config": {"digest": config_sha}})
@@ -123,7 +123,7 @@ class Tasks:
             "requiresCompatibilities": ["FARGATE"],
             "containerDefinitions": [{"image": image, "readonlyRootFilesystem": True,
                                       "environment": [{"name": name, "value": "us-west-2"} for name in [
-                                          "COVE_REGION", "AWS_REGION", "AWS_DEFAULT_REGION"]],
+                                          "COLVENNA_REGION", "AWS_REGION", "AWS_DEFAULT_REGION"]],
                                       "user": "10001:10001"}],
         }
 
@@ -164,10 +164,10 @@ class ArtifactTests(unittest.TestCase):
             "source": {"type": "S3", "location": "test-bucket/artifacts/builders/original.zip",
                        "buildspec": "buildspec.yml"},
             "sourceVersion": "original-source-version", "environment": {"environmentVariables": [
-                {"name": "COVE_ENVIRONMENT_BUILD_ID", "value": "build_original"},
-                {"name": "COVE_ENVIRONMENT_SPECIFICATION_SHA256",
+                {"name": "COLVENNA_ENVIRONMENT_BUILD_ID", "value": "build_original"},
+                {"name": "COLVENNA_ENVIRONMENT_SPECIFICATION_SHA256",
                  "value": self.record["specification_sha256"]},
-                {"name": "COVE_ENVIRONMENT_SPECIFICATION_REF",
+                {"name": "COLVENNA_ENVIRONMENT_SPECIFICATION_REF",
                  "value": canonical(self.record["build"]["specification_ref"])},
             ]},
         }
@@ -201,7 +201,7 @@ class ArtifactTests(unittest.TestCase):
         return self.artifacts.verify(self.record, self.actual)
 
     def test_sql_capable_environments_bind_sql_profiles_to_the_same_versions(self):
-        from cove_duckdb.control.environment_artifacts import binding_shape
+        from colvenna_isle.control.environment_artifacts import binding_shape
 
         python = [{"name": "pandas"}]
         sql = python + [{"name": "duckdb"}, {"name": "pyarrow"}]
@@ -337,7 +337,7 @@ class ArtifactTests(unittest.TestCase):
         for mutate in [
             lambda c: c.update(architecture="amd64"),
             lambda c: c["config"].update(User="root"),
-            lambda c: c["config"]["Labels"].update({"io.cove.dependency-lock": "0" * 64}),
+            lambda c: c["config"]["Labels"].update({"io.colvenna.dependency-lock": "0" * 64}),
             lambda c: c["config"].update(Env=["AWS_SECRET_ACCESS_KEY=forbidden"]),
         ]:
             self.setUp()
