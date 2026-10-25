@@ -36,6 +36,11 @@ def main():
                "-r", str(ROOT / "runtime/aws-requirements.lock")]
     with (output / "install.log").open("x") as stream:
         subprocess.run(command, check=True, stdout=stream, stderr=subprocess.STDOUT)
+    # Dependency CLI scripts bind to the build host's interpreter. Services
+    # import these packages as modules, so those host-specific entrypoints
+    # do not belong in the Lambda ZIP or the writer/query application.
+    if (package / "bin").exists():
+        shutil.rmtree(package / "bin")
     shutil.copytree(ROOT / "src/colvenna_isle", package / "colvenna_isle", ignore=shutil.ignore_patterns("__pycache__"))
     sources = {str(path.relative_to(ROOT)): hashlib.sha256(path.read_bytes()).hexdigest()
                for path in sorted((ROOT / "src/colvenna_isle").rglob("*"))

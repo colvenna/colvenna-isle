@@ -1,6 +1,6 @@
 # Colvenna Isle 用户手册
 
-当前源码为未发行的 `2.0.0.dev0` 候选。包、配置、协议头与系统列统一采用 Colvenna 名称，契约 revision 为 2，原生格式为 6；1.x 用户需按[迁移设计](design/identifier-migration.md)升级。下文的 AWS 验收属于历史版本；候选的运行时验收为 `NOT_RUN`，见[发行说明](release-notes.md#200-unreleased)。
+当前源码为未发行的 `2.0.0.dev0` 候选。包、配置、协议头与系统列统一采用 Colvenna 名称，契约 revision 为 2，原生格式为 6；1.x 用户需按[迁移设计](design/identifier-migration.md)升级。下文的 AWS 验收属于历史版本；候选的运行时验收按确切源码与制品摘要单独记录，见 [PR #23](https://github.com/colvenna/colvenna-isle/pull/23) 和[发行说明](release-notes.md#200-unreleased)。
 
 本手册面向应用开发者、数据工程师和分析人员，说明如何在一个已安装的 Colvenna Isle 环境中工作：
 

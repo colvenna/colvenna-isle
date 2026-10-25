@@ -1,6 +1,6 @@
 # Python 包依赖与运行环境
 
-适用版本：2.0.0 候选；本文使用当前标识与契约，AWS 验收仅属于历史 1.1.0。环境由固定源码的 CodeBuild 构建，通过环境 API 管理，绑定 Lambda 数字版本或 ECS 任务定义 revision；依赖升级生成新的环境版本，不合格的依赖在构建时拒绝。流水线按本文绑定环境运行，使用方式见[用户手册](../user-guide.md)。Lambda Managed Instances 与 Durable Functions profile 尚未实现。
+适用版本：2.0.0 候选；本文使用当前标识与契约；历史 1.1.0 的 AWS 验收不代表候选通过，候选验证范围见 [PR #23](https://github.com/colvenna/colvenna-isle/pull/23)。环境由固定源码的 CodeBuild 构建，通过环境 API 管理，绑定 Lambda 数字版本或 ECS 任务定义 revision；依赖升级生成新的环境版本，不合格的依赖在构建时拒绝。流水线按本文绑定环境运行，使用方式见[用户手册](../user-guide.md)。Lambda Managed Instances 与 Durable Functions profile 尚未实现。
 
 ## 1. 包依赖属于发布版本
 

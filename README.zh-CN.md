@@ -24,7 +24,7 @@ Colvenna Isle 是面向 AWS 的数据库与分析产品，整合 API 接入、S3
 
 ## 1.1.0 发行
 
-下一版本完成代码、配置、协议与数据中的 Colvenna 标识迁移；`main` 为 `2.0.0.dev0`（未发行）。这是大版本破坏性升级，见[迁移设计](docs/design/identifier-migration.md)；候选的 AWS 验收为 `NOT_RUN`。
+下一版本完成代码、配置、协议与数据中的 Colvenna 标识迁移；`main` 为 `2.0.0.dev0`（未发行）。这是大版本破坏性升级，见[迁移设计](docs/design/identifier-migration.md)；候选的 AWS 验收按确切源码与制品摘要单独记录，见 [PR #23](https://github.com/colvenna/colvenna-isle/pull/23)。
 
 已发布的 1.1.0（[GitHub Release `v1.1.0`](https://github.com/colvenna/colvenna-isle/releases/tag/v1.1.0)）提供历史 1.x 接口与能力，以下属于该版本的实际 AWS 验收：
 

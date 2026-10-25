@@ -22,7 +22,7 @@ Colvenna Isle is a database and analytics product for AWS. Applications write th
 
 ## Release 1.1.0
 
-The next release completes the Colvenna identifiers across code, configuration, protocols and data; `main` is `2.0.0.dev0` (unreleased). This is a breaking upgrade: see the [migration design](docs/design/identifier-migration.md). Candidate AWS acceptance is `NOT_RUN`.
+The next release completes the Colvenna identifiers across code, configuration, protocols and data; `main` is `2.0.0.dev0` (unreleased). This is a breaking upgrade: see the [migration design](docs/design/identifier-migration.md). Candidate AWS acceptance is recorded for each exact source commit and artifact digest in [PR #23](https://github.com/colvenna/colvenna-isle/pull/23).
 
 Published version 1.1.0 ([GitHub Release `v1.1.0`](https://github.com/colvenna/colvenna-isle/releases/tag/v1.1.0)) provides the historical 1.x interfaces and capabilities accepted on AWS:
 

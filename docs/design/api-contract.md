@@ -1,6 +1,6 @@
 # Colvenna Isle API contract
 
-The unreleased `2.0.0.dev0` candidate uses `colvenna_isle`, `COLVENNA_*`, `x-colvenna-*` headers and `_colvenna_*` system columns. Contract revision is 2 and native space format is 6; old revisions and old native identities are rejected. Public route paths remain `/v1/`. See the [migration design](identifier-migration.md); candidate AWS acceptance is `NOT_RUN`.
+The unreleased `2.0.0.dev0` candidate uses `colvenna_isle`, `COLVENNA_*`, `x-colvenna-*` headers and `_colvenna_*` system columns. Contract revision is 2 and native space format is 6; old revisions and old native identities are rejected. Public route paths remain `/v1/`. See the [migration design](identifier-migration.md); AWS acceptance is recorded for each exact source commit and artifact digest in [PR #23](https://github.com/colvenna/colvenna-isle/pull/23).
 
 Applies to the current 2.0.0 candidate; published 1.x interfaces are historical. The route behavior originated in 1.1.0; the [user guide](../user-guide.md) describes how to use them. Operator-only actions (space provisioning, quotas, backups and restores, installation) use IAM tools, not public routes; see the [installation guide](../installation.md).
 

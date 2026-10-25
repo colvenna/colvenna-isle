@@ -1,6 +1,6 @@
 # 每个任务独立选择增量、分区重算或全量
 
-适用版本：2.0.0 候选；本文使用当前标识与契约，AWS 验收仅属于历史 1.1.0。处理模式是任务级配置，SQL/Python、Lambda/ECS 都适用。模式不会由平台仅根据 SQL 中出现 GROUP BY 或 agg 自动推断。
+适用版本：2.0.0 候选；本文使用当前标识与契约；历史 1.1.0 的 AWS 验收不代表候选通过，候选验证范围见 [PR #23](https://github.com/colvenna/colvenna-isle/pull/23)。处理模式是任务级配置，SQL/Python、Lambda/ECS 都适用。模式不会由平台仅根据 SQL 中出现 GROUP BY 或 agg 自动推断。
 
 [机器合同 v2](../../src/colvenna_isle/contracts/v2/contracts.schema.json) 批准 full + versioned_replace、源版本/键状态 incremental + merge_keys、partition_recompute + replace_partitions。1.1.0 尚未定义增量生成完整镜像或通用聚合状态所需的完整状态输入/输出合同，发布校验拒绝未批准的组合。
 

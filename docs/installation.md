@@ -1,6 +1,6 @@
 # Colvenna Isle 安装部署手册
 
-本手册适用于当前未发行的 `2.0.0.dev0` 候选，面向在自己的 AWS 账号和商业区域（partition `aws`）中安装和运维 Colvenna Isle 的运维人员。改名后的 AWS 安装验收为 `NOT_RUN`；1.1.0 的历史验收不代表当前候选通过。涵盖以下内容：
+本手册适用于当前未发行的 `2.0.0.dev0` 候选，面向在自己的 AWS 账号和商业区域（partition `aws`）中安装和运维 Colvenna Isle 的运维人员。改名后的 AWS 安装验收按确切源码与制品摘要单独记录，见 [PR #23](https://github.com/colvenna/colvenna-isle/pull/23)；1.1.0 的历史验收不代表当前候选通过。涵盖以下内容：
 
 - 准备部署主机与原生存储镜像；
 - 构建 release；

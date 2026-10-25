@@ -1,6 +1,6 @@
 # 同步业务表写入
 
-适用版本：2.0.0 候选；本文使用当前标识与契约，AWS 验收仅属于历史 1.1.0。同步写由机器合同校验、原生事务和独立私网代理实现；接口见 [API 契约](api-contract.md#synchronous-table-writes)，使用方式见[用户手册](../user-guide.md)。公开写后查询（`after_write`）见第 6 节。多 DuckDB 分片与独立写者只是尚未设计的演进方向，不在 1.1.0 范围内（见[发行说明](../release-notes.md#计划中尚未实现)）。
+适用版本：2.0.0 候选；本文使用当前标识与契约；历史 1.1.0 的 AWS 验收不代表候选通过，候选验证范围见 [PR #23](https://github.com/colvenna/colvenna-isle/pull/23)。同步写由机器合同校验、原生事务和独立私网代理实现；接口见 [API 契约](api-contract.md#synchronous-table-writes)，使用方式见[用户手册](../user-guide.md)。公开写后查询（`after_write`）见第 6 节。多 DuckDB 分片与独立写者只是尚未设计的演进方向，不在 1.1.0 范围内（见[发行说明](../release-notes.md#计划中尚未实现)）。
 
 ## 1. 写入目标与成功语义
 

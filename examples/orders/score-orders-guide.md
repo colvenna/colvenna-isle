@@ -1,6 +1,6 @@
 # score_orders 配置与输出清单详解
 
-适用版本：2.0.0 候选，合同 revision 为 2；AWS 验收属于历史 1.1.0。本文说明 `score_orders` 的配置与执行协议；云端执行（Lambda / ECS 运行环境、资源 profile 与数据库发布）见[用户手册](../../docs/user-guide.md#8-流水线)。
+适用版本：2.0.0 候选，合同 revision 为 2；历史 1.1.0 的 AWS 验收不代表候选通过，候选验证范围见 [PR #23](https://github.com/colvenna/colvenna-isle/pull/23)。本文说明 `score_orders` 的配置与执行协议；云端执行（Lambda / ECS 运行环境、资源 profile 与数据库发布）见[用户手册](../../docs/user-guide.md#8-流水线)。
 
 该任务等待 clean_orders 发布结果，在 Lambda 中运行 Python，对完整订单快照分类，再由唯一写者发布 dwd.order_scores。配置源见 [pipeline.yaml](pipeline.yaml)，代码见 [score_orders.py](python/score_orders.py)。
 
