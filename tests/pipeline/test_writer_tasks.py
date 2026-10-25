@@ -3,8 +3,8 @@
 import time
 import unittest
 
-from cove_duckdb.control.registry import ControlError
-from cove_duckdb.writer.tasks import WriterTasks
+from colvenna_isle.control.registry import ControlError
+from colvenna_isle.writer.tasks import WriterTasks
 from test_sql_tasks import CLEAN, SqlTasks
 
 

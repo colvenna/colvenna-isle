@@ -9,9 +9,9 @@ from pathlib import Path
 
 import duckdb
 
-from cove_duckdb.control.registry import ControlError
-from cove_duckdb.writer.ingestion import CommitUnknown, IngestionStore, digest
-from cove_duckdb.writer.writes import WriteStore, business_binding, write_id
+from colvenna_isle.control.registry import ControlError
+from colvenna_isle.writer.ingestion import CommitUnknown, IngestionStore, digest
+from colvenna_isle.writer.writes import WriteStore, business_binding, write_id
 from test_transactions import CONFIGURATION as INGESTION_CONFIGURATION
 from test_transactions import REGISTERED as INGESTION_REGISTERED
 from test_transactions import message, payload

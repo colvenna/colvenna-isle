@@ -54,7 +54,7 @@ def main():
     with tarfile.open(archive) as tar:
         tar.extractall(source, filter="data")
     version = "0.0.0.dev0+g" + head
-    (source / "src/cove_duckdb/_version.py").write_text(f'__version__ = "{version}"\n')
+    (source / "src/colvenna_isle/_version.py").write_text(f'__version__ = "{version}"\n')
     log = output / "validation.log"
     checks = [
         [sys.executable, "-m", "pip", "check"],
@@ -69,7 +69,7 @@ def main():
         for command in checks:
             try:
                 stream.write(run(command, cwd=source, env=dict(os.environ, PYTHONPATH=str(source / "src"),
-                    COVE_REGION=FIXTURE_REGION, AWS_REGION=FIXTURE_REGION, AWS_DEFAULT_REGION=FIXTURE_REGION)))
+                    COLVENNA_REGION=FIXTURE_REGION, AWS_REGION=FIXTURE_REGION, AWS_DEFAULT_REGION=FIXTURE_REGION)))
             except subprocess.CalledProcessError as error:
                 stream.write(error.stdout or "")
                 (output / "failure.json").write_text(json.dumps({
@@ -88,14 +88,14 @@ def main():
     (output / "install.log").write_text(run([
         sys.executable, "-m", "pip", "install", "--no-index", "--no-deps", "--target",
         str(installed), str(wheel)], cwd=output))
-    env = dict(os.environ, PYTHONPATH=str(installed), COVE_REGION=FIXTURE_REGION,
+    env = dict(os.environ, PYTHONPATH=str(installed), COLVENNA_REGION=FIXTURE_REGION,
                AWS_REGION=FIXTURE_REGION, AWS_DEFAULT_REGION=FIXTURE_REGION)
     package_version = run([sys.executable, "-c",
-                          "from cove_duckdb._version import __version__; print(__version__)"],
+                          "from colvenna_isle._version import __version__; print(__version__)"],
                           cwd=output, env=env).strip()
     assert package_version == version
     (output / "installed-check.log").write_text(run([
-        sys.executable, "-m", "cove_duckdb.contracts", "generate", "--check"], cwd=output, env=env))
+        sys.executable, "-m", "colvenna_isle.contracts", "generate", "--check"], cwd=output, env=env))
     licenses = []
     for distribution in sorted(importlib.metadata.distributions(), key=lambda d: d.metadata["Name"].lower()):
         files = distribution.files or []
@@ -119,7 +119,7 @@ def main():
     if args.storage_receipt:
         storage = json.loads(args.storage_receipt.read_text())
         lock = json.loads((source / "runtime/storage-lock.json").read_text())
-        for name, expected in storage["cove_sources"].items():
+        for name, expected in storage["colvenna_sources"].items():
             if digest(source / name) != expected:
                 raise RuntimeError(f"Storage source differs from the build receipt: {name}")
         inspected = json.loads(run(["docker", "image", "inspect", args.storage_image]))[0]
@@ -127,7 +127,7 @@ def main():
             raise RuntimeError("Storage image differs from its receipt")
         # Verify the installed extension files rather than trusting a copied receipt.
         code = ("import hashlib,json,pathlib,duckdb; "
-                "p=pathlib.Path('/opt/cove/artifacts'); "
+                "p=pathlib.Path('/opt/colvenna/artifacts'); "
                 "print(json.dumps({'version':duckdb.__version__,"
                 "'files':{f.name:hashlib.sha256(f.read_bytes()).hexdigest() for f in p.glob('*.duckdb_extension')}}))")
         actual = json.loads(run(["docker", "run", "--rm", "--network", "none", "--read-only",
@@ -137,7 +137,7 @@ def main():
             raise RuntimeError("Installed storage binaries differ")
         load_code = ("import duckdb; c=duckdb.connect(config={'allow_unsigned_extensions':True,"
                      "'autoinstall_known_extensions':False,'autoload_known_extensions':False}); "
-                     "[c.execute(\"LOAD '/opt/cove/artifacts/\"+x+\".duckdb_extension'\") "
+                     "[c.execute(\"LOAD '/opt/colvenna/artifacts/\"+x+\".duckdb_extension'\") "
                      "for x in ['httpfs','aws','duckdb_object_storage']]; print(c.execute('SELECT 42').fetchall())")
         (output / "storage-import.log").write_text(run([
             "docker", "run", "--rm", "--network", "none", "--read-only", "--cap-drop", "ALL",

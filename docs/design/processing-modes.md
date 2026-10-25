@@ -2,7 +2,7 @@
 
 适用版本：1.1.0。处理模式是任务级配置，SQL/Python、Lambda/ECS 都适用。模式不会由平台仅根据 SQL 中出现 GROUP BY 或 agg 自动推断。
 
-[机器合同 v1](../../src/cove_duckdb/contracts/v1/contracts.schema.json) 批准 full + versioned_replace、源版本/键状态 incremental + merge_keys、partition_recompute + replace_partitions。1.1.0 尚未定义增量生成完整镜像或通用聚合状态所需的完整状态输入/输出合同，发布校验拒绝未批准的组合。
+[机器合同 v2](../../src/colvenna_isle/contracts/v2/contracts.schema.json) 批准 full + versioned_replace、源版本/键状态 incremental + merge_keys、partition_recompute + replace_partitions。1.1.0 尚未定义增量生成完整镜像或通用聚合状态所需的完整状态输入/输出合同，发布校验拒绝未批准的组合。
 
 ## 1. 计算范围与输出更新分开定义
 
@@ -81,11 +81,11 @@ Python context 在普通合同基础上增加：
 
 ## 4. merge_keys 的发布合同
 
-产物必须包含 `_cove_op`（UPSERT / DELETE）及注册业务键，每个键最多一个最终操作。UPSERT 是完整目标行，按目标 schema 校验；DELETE 只要求键和声明的状态 metadata，非键业务列可以为空。wire schema 明确包含操作列及需要的版本 metadata；这些保留列不自动成为业务表列。
+产物必须包含 `_colvenna_op`（UPSERT / DELETE）及注册业务键，每个键最多一个最终操作。UPSERT 是完整目标行，按目标 schema 校验；DELETE 只要求键和声明的状态 metadata，非键业务列可以为空。wire schema 明确包含操作列及需要的版本 metadata；这些保留列不自动成为业务表列。
 
-源版本清洗示例使用 `_cove_version`、`_cove_sequence` 更新键状态，包含删除 tombstone。任务定义和平台 adapter 校验 metadata 的类型、范围和与固定输入的关系；不能由脚本越权提升水位。对没有业务版本的变换，状态协议必须另行明确，不能直接套用该示例。
+源版本清洗示例使用 `_colvenna_version`、`_colvenna_sequence` 更新键状态，包含删除 tombstone。任务定义和平台 adapter 校验 metadata 的类型、范围和与固定输入的关系；不能由脚本越权提升水位。对没有业务版本的变换，状态协议必须另行明确，不能直接套用该示例。
 
-当前定义在 `output.change_metadata` 按顺序声明 `_cove_version`、`_cove_sequence` 两个非空 BIGINT。context.output.target_schema 保存业务 schema，context.output.schema 按 `_cove_op`、业务列、metadata 的顺序形成 wire schema；DELETE 非键业务列可空，UPSERT 仍须满足完整业务行和非空条件。版本/序号非负，实际来源还要由可信 adapter 核对。
+当前定义在 `output.change_metadata` 按顺序声明 `_colvenna_version`、`_colvenna_sequence` 两个非空 BIGINT。context.output.target_schema 保存业务 schema，context.output.schema 按 `_colvenna_op`、业务列、metadata 的顺序形成 wire schema；DELETE 非键业务列可空，UPSERT 仍须满足完整业务行和非空条件。版本/序号非负，实际来源还要由可信 adapter 核对。
 
 `row_count=0` 在 merge_keys 中表示“没有键变化”，保留目标数据，仍可在有效区间核对后推进水位；在 versioned_replace 中则表示“目标全量变为空”。清单必须有正确的 wire schema，不能混用这两种语义。
 

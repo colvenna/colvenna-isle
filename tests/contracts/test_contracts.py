@@ -13,8 +13,8 @@ from jsonschema import Draft202012Validator
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
-from cove_duckdb.contracts.model import ROUTES, artifacts, schemas
-from cove_duckdb.contracts.validation import (
+from colvenna_isle.contracts.model import ROUTES, artifacts, schemas
+from colvenna_isle.contracts.validation import (
     ContractError, load_document, validate, validate_change,
     validate_record, validate_transition, validate_value, wire_schema,
 )
@@ -28,7 +28,7 @@ def context():
     columns = [{"name": "order_id", "type": "BIGINT", "nullable": False},
                {"name": "amount", "type": "DECIMAL(18,2)", "nullable": False}]
     return {
-        "contract_version": 1, "space_id": "space_1", "pipeline_id": "orders",
+        "contract_version": 2, "space_id": "space_1", "pipeline_id": "orders",
         "pipeline_version": "v1", "run_id": "run_1", "task_id": "score_orders",
         "job_id": "job_1", "attempt_id": "attempt_1", "execution_id": "exec_1",
         "input_mode": "local_files", "parameters": {"high_value_threshold": "500.00"},
@@ -52,7 +52,7 @@ def context():
 
 def manifest(ctx):
     return {
-        "contract_version": 1, "job_id": ctx["job_id"], "attempt_id": ctx["attempt_id"],
+        "contract_version": 2, "job_id": ctx["job_id"], "attempt_id": ctx["attempt_id"],
         "execution_id": ctx["execution_id"], "output_name": "result", "format": "parquet",
         "schema": copy.deepcopy(ctx["output"]["schema"]), "row_count": 2,
         "files": [{"path": "part.parquet", "rows": 2, "bytes": 256,
@@ -91,7 +91,7 @@ class ContractTests(unittest.TestCase):
     def test_artifact_generation_and_every_api_reference(self):
         Draft202012Validator.check_schema(schemas())
         generated = artifacts()
-        folder = ROOT / "src/cove_duckdb/contracts/v1"
+        folder = ROOT / "src/colvenna_isle/contracts/v2"
         for name, value in generated.items():
             self.assertEqual(json.loads((folder / name).read_text()), value)
         operations = []
@@ -132,7 +132,7 @@ class ContractTests(unittest.TestCase):
             "validate_request": {"draft_revision": "r1"},
             "version_request": {"draft_revision": "r1"},
             "activate_request": {"pipeline_version": "v1"},
-            "schedule_request": {"owner": "cove", "expression": "rate(1 minute)", "timezone": "UTC", "state": "ENABLED"},
+            "schedule_request": {"owner": "colvenna", "expression": "rate(1 minute)", "timezone": "UTC", "state": "ENABLED"},
             "run_request": {"pipeline_version": "v1", "inputs": {"clean_orders.events": {"release_id": "r1"}},
                             "parameters": {"high_value_threshold": "500.00"}, "mode": "snapshot"},
             "environment_request": {
@@ -215,7 +215,7 @@ class ContractTests(unittest.TestCase):
             {"Content-Type": "application/json"},
             {**request["headers"], "Authorization": "Basic "+("a"*43)},
             {**request["headers"], "authorization": "Bearer "+("b"*43)},
-            {**request["headers"], "X-Cove-Scopes": "keys:manage"},
+            {**request["headers"], "X-Colvenna-Scopes": "keys:manage"},
             {**request["headers"], "X-Trace": "a\r\nb"},
         ]:
             self.assertReject(lambda: validate("http_request", {**request, "headers": headers}))
@@ -290,19 +290,19 @@ class ContractTests(unittest.TestCase):
                           "key_state": {"state": "target_key_state", "selection": "affected_keys"}}
         task["output"]["write_mode"] = "merge_keys"
         task["output"]["change_metadata"] = [
-            {"name": "_cove_version", "type": "BIGINT", "nullable": False},
-            {"name": "_cove_sequence", "type": "BIGINT", "nullable": False},
+            {"name": "_colvenna_version", "type": "BIGINT", "nullable": False},
+            {"name": "_colvenna_sequence", "type": "BIGINT", "nullable": False},
         ]
         incremental = {**base, "tasks": [task]}
         validate("pipeline", incremental)
         incomplete_state = copy.deepcopy(incremental)
         incomplete_state["tasks"][0]["output"]["write_mode"] = "versioned_replace"
         self.assertReject(lambda: validate("pipeline", incomplete_state))
-        validate_change(task["output"], {"_cove_op": "DELETE", "order_id": 1, "_cove_version": 2, "_cove_sequence": 42})
-        self.assertReject(lambda: validate_change(task["output"], {"_cove_op": "UPSERT", "order_id": 1,
-                                                                   "_cove_version": 2, "_cove_sequence": 42}))
-        self.assertReject(lambda: validate_change(task["output"], {"_cove_op": "DELETE", "order_id": 1,
-                                                                   "_cove_version": -1, "_cove_sequence": 42}))
+        validate_change(task["output"], {"_colvenna_op": "DELETE", "order_id": 1, "_colvenna_version": 2, "_colvenna_sequence": 42})
+        self.assertReject(lambda: validate_change(task["output"], {"_colvenna_op": "UPSERT", "order_id": 1,
+                                                                   "_colvenna_version": 2, "_colvenna_sequence": 42}))
+        self.assertReject(lambda: validate_change(task["output"], {"_colvenna_op": "DELETE", "order_id": 1,
+                                                                   "_colvenna_version": -1, "_colvenna_sequence": 42}))
         without_state = copy.deepcopy(incremental)
         del without_state["tasks"][0]["inputs"]["key_state"]
         self.assertReject(lambda: validate("pipeline", without_state))
@@ -346,8 +346,8 @@ class ContractTests(unittest.TestCase):
         validate("context", cloud)
         inc = copy.deepcopy(ctx)
         output = inc["output"]
-        metadata = [{"name": "_cove_version", "type": "BIGINT", "nullable": False},
-                    {"name": "_cove_sequence", "type": "BIGINT", "nullable": False}]
+        metadata = [{"name": "_colvenna_version", "type": "BIGINT", "nullable": False},
+                    {"name": "_colvenna_sequence", "type": "BIGINT", "nullable": False}]
         output.update(write_mode="merge_keys", allow_empty=False, target_schema=copy.deepcopy(output["schema"]))
         output["schema"] = wire_schema({"schema": output["target_schema"], "key_columns": ["order_id"],
                                         "change_metadata": metadata})
@@ -418,7 +418,7 @@ class ContractTests(unittest.TestCase):
                 path.write_text(json.dumps(value))
                 env = __import__("os").environ.copy()
                 env["PYTHONPATH"] = str(ROOT / "src")
-                result = subprocess.run([sys.executable, "-m", "cove_duckdb.contracts", "validate",
+                result = subprocess.run([sys.executable, "-m", "colvenna_isle.contracts", "validate",
                                          "query_request", str(path)], env=env, capture_output=True, text=True)
                 self.assertEqual(result.returncode, expected)
                 if expected == 0:

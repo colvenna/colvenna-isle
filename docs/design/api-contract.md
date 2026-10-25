@@ -1,12 +1,12 @@
 # Colvenna Isle API contract
 
-The unreleased `1.2.0.dev0` candidate changes branding and the schema identifier only. Routes, validation rules, protocol headers and contract version remain those of 1.1.0. Candidate AWS acceptance is `NOT_RUN`; see the [rename notes](../release-notes.md#120-unreleased).
+The unreleased `2.0.0.dev0` candidate uses `colvenna_isle`, `COLVENNA_*`, `x-colvenna-*` headers and `_colvenna_*` system columns. Contract revision is 2 and native space format is 6; old revisions and old native identities are rejected. Public route paths remain `/v1/`. See the [migration design](identifier-migration.md); candidate AWS acceptance is `NOT_RUN`.
 
-Applies to 1.1.0; changes since 1.0.0 are listed in the [release notes](../release-notes.md#110-的变更). Every route below is implemented in 1.1.0; the [user guide](../user-guide.md) describes how to use them. Operator-only actions (space provisioning, quotas, backups and restores, installation) use IAM tools, not public routes; see the [installation guide](../installation.md).
+Applies to the current 2.0.0 candidate; published 1.x interfaces are historical. The route behavior originated in 1.1.0; the [user guide](../user-guide.md) describes how to use them. Operator-only actions (space provisioning, quotas, backups and restores, installation) use IAM tools, not public routes; see the [installation guide](../installation.md).
 
-The executable contract is [OpenAPI 3.1](../../src/cove_duckdb/contracts/v1/openapi.json) plus [JSON Schema](../../src/cove_duckdb/contracts/v1/contracts.schema.json) and [semantic validation](../../src/cove_duckdb/contracts/validation.py). These are offline contract checks: they do not authenticate a key or prove that a referenced resource exists, which the services check independently. Unknown request fields and caller-supplied execution resources are rejected.
+The executable contract is [OpenAPI 3.1](../../src/colvenna_isle/contracts/v2/openapi.json) plus [JSON Schema](../../src/colvenna_isle/contracts/v2/contracts.schema.json) and [semantic validation](../../src/colvenna_isle/contracts/validation.py). These are offline contract checks: they do not authenticate a key or prove that a referenced resource exists, which the services check independently. Unknown request fields and caller-supplied execution resources are rejected.
 
-Releases provide no backward compatibility, automatic migration of older API/configuration/storage formats, or zero-downtime upgrade; see [destructive upgrades](../installation.md#10-破坏性升级) and the [release limits](../release-notes.md#限制).
+Releases provide no backward compatibility, automatic in-place migration of older API/configuration/storage formats, or zero-downtime upgrade; see [destructive upgrades](../installation.md#10-破坏性升级) and the [release limits](../release-notes.md#限制).
 
 ## Authentication and authorization
 
@@ -68,7 +68,7 @@ Space creation/rebuild uses an IAM-authenticated deployment bootstrap. It is not
 | `GET /v1/admin/spaces/{space_id}/configuration` | `datasets:manage`; return the atomic route/version and registered dataset definitions |
 | `POST /v1/admin/spaces/{space_id}/datasets` | `datasets:manage`; required `If-Match: "<generation>"`; register immutable dataset/schema_version/schema/key_columns/partition_columns and optional ODS ingestion metadata; return `201` |
 
-A same-definition retry returns the same registered metadata. A different definition at the same qualified dataset name returns `409`. Current-generation schema changes require the controlled stop/invalidate/rebuild process ([rebuild](../installation.md#10-破坏性升级)). The [machine contract](../../src/cove_duckdb/contracts/v1/contracts.schema.json) defines registration bounds and the event/version columns; the [user guide](../user-guide.md) describes registration. The installer enables public Bearer authentication only after the authorizer and control functions run the release code and reject missing or invalid credentials (see [fresh installation](../installation.md#6-全新安装)).
+A same-definition retry returns the same registered metadata. A different definition at the same qualified dataset name returns `409`. Current-generation schema changes require the controlled stop/invalidate/rebuild process ([rebuild](../installation.md#10-破坏性升级)). The [machine contract](../../src/colvenna_isle/contracts/v2/contracts.schema.json) defines registration bounds and the event/version columns; the [user guide](../user-guide.md) describes registration. The installer enables public Bearer authentication only after the authorizer and control functions run the release code and reject missing or invalid credentials (see [fresh installation](../installation.md#6-全新安装)).
 
 Pipeline targets may register `publication_state` with `protocol: complete_image_v1`, an explicit typed `schema`, the same nonnullable business `key_columns`, and `allow_empty`. This binds an internal complete state image to the target definition; it does not approve an incremental computation or a user task state-output interface. In 1.1.0, full Python task admission rejects such a target with `TASK_STATE_AUTHORITY_NOT_READY`. The writer validates and publishes data and state images through the native publication ledger described in the [pipeline design](pipeline-design.md#5-运行重试与发布).
 
@@ -131,7 +131,7 @@ Required scope: `ingest:write`. Required header: `Idempotency-Key`.
 
 The dataset must be registered for ingestion. Operations are `append`, `upsert`, and `delete`; schema and required business identifiers determine the accepted record shape. A `TIMESTAMP` value carries no offset (`2026-10-15T08:00:00`); a `TIMESTAMPTZ` value requires one (`Z` or `+08:00`).
 
-ODS retains unique event history, including old business versions and sparse tombstones. The same event ID with different typed content rejects the batch. A distinct event at the same business key/version also rejects it; lower versions are traceable `STALE` events and cannot regress the key's version/tombstone. A repeated batch returns its original committed receipt and commit sequence. The reserved `_cove_*` columns record event provenance.
+ODS retains unique event history, including old business versions and sparse tombstones. The same event ID with different typed content rejects the batch. A distinct event at the same business key/version also rejects it; lower versions are traceable `STALE` events and cannot regress the key's version/tombstone. A repeated batch returns its original committed receipt and commit sequence. The reserved `_colvenna_*` columns record event provenance.
 
 Response: `202 Accepted`, only after the immutable source object is stored in S3 and SQS confirms `SendMessage`. The intake Lambda sends directly to SQS FIFO. DynamoDB contains one control-plane table for API Keys, routing, and asynchronous status projections; it does not dispatch ingestion messages.
 
@@ -291,7 +291,7 @@ External tasks name `runtime_environment: {environment_id, version}`. Metadata e
 
 Version publication binds the complete immutable code package, environment versions, resolved executor configuration and schema. A subsequent draft edit does not mutate existing versions. Active schedule configuration is separately revisioned; enabling or changing its owner never modifies a running job's bindings.
 
-Schedule owner is `cove`, `external` or `none`. Colvenna Isle-owned schedules use supported EventBridge Scheduler rate/cron expressions. External ownership disables Colvenna Isle's automatic run creation; internal dependency progression continues. PAUSED stops new runs but does not cancel existing runs. Clients cannot override the schedule owner in a run request.
+Schedule owner is `colvenna`, `external` or `none`. Colvenna Isle-owned schedules use supported EventBridge Scheduler rate/cron expressions. External ownership disables Colvenna Isle's automatic run creation; internal dependency progression continues. PAUSED stops new runs but does not cancel existing runs. Clients cannot override the schedule owner in a run request.
 
 ### `POST /v1/spaces/{space_id}/pipelines/{pipeline_id}/runs`
 
@@ -445,7 +445,7 @@ The first management key is issued by a controlled deployment bootstrap. Public 
 
 ## Deployment region and cost observations
 
-The deployment selects one commercial AWS region (partition `aws`) through `COVE_REGION` / `AWS_REGION`; conflicting settings fail before AWS calls. Stack resources use `AWS::Region`, services use the injected runtime region, and executor approval binds account, exact deployed region and runtime namespace. A contract-valid ARN from another region still cannot pass runtime approval. Chinese, GovCloud and isolated partitions are outside this contract.
+The deployment selects one commercial AWS region (partition `aws`) through `COLVENNA_REGION` / `AWS_REGION`; conflicting settings fail before AWS calls. Stack resources use `AWS::Region`, services use the injected runtime region, and executor approval binds account, exact deployed region and runtime namespace. A contract-valid ARN from another region still cannot pass runtime approval. Chinese, GovCloud and isolated partitions are outside this contract.
 
 Cost reports use only a price snapshot for the deployed region. With none, `status` is `UNKNOWN`, `prices.retrieved` is null, `prices.sources`, `lines` and `totals` are empty, and `unmeasured` names `REGIONAL_PRICES_UNAVAILABLE`. Existing `COMPLETE` / `PARTIAL` observations retain their meanings when regional prices are available. Price snapshot keys and provenance identify the region actually priced; they do not configure deployment.
 

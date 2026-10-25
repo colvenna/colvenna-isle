@@ -8,10 +8,10 @@ from datetime import datetime, timezone
 
 from botocore.exceptions import ClientError
 
-from cove_duckdb.control.audit import Audit
-from cove_duckdb.control.quotas import Quotas
-from cove_duckdb.control.registry import ControlError, Principal, canonical
-from cove_duckdb.control.retention import Collector, Retention, Sweep, effective
+from colvenna_isle.control.audit import Audit
+from colvenna_isle.control.quotas import Quotas
+from colvenna_isle.control.registry import ControlError, Principal, canonical
+from colvenna_isle.control.retention import Collector, Retention, Sweep, effective
 from test_governance_runs import Fixture, query
 
 DAY = 86400

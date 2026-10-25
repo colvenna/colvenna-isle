@@ -23,19 +23,19 @@ sys.path[:0] = [str(ROOT), str(ROOT / "src")]
 from infra.names import names
 from infra.template import template
 
-from cove_duckdb.region import region
+from colvenna_isle.region import region
 
 REGION = region()
 REPOSITORY = "colvenna-isle-images"
-# One environment per process, named by the required COVE_ENVIRONMENT.
+# One environment per process, named by the required COLVENNA_ENVIRONMENT.
 STACKS = names()
 
 
 def account():
     """The account to operate on is the operator's explicit choice; it is never part of the source."""
-    value = os.environ.get("COVE_ACCOUNT", "")
+    value = os.environ.get("COLVENNA_ACCOUNT", "")
     if not re.fullmatch(r"[0-9]{12}", value):
-        raise RuntimeError("Set COVE_ACCOUNT to the 12-digit AWS account to operate on")
+        raise RuntimeError("Set COLVENNA_ACCOUNT to the 12-digit AWS account to operate on")
     return value
 
 
@@ -70,7 +70,7 @@ def session():
     identity = current.client("sts").get_caller_identity()
     if identity["Account"] != account() or not identity["Arn"].startswith(
             f"arn:aws:sts::{account()}:assumed-role/"):
-        raise RuntimeError("Expected an assumed role in COVE_ACCOUNT")
+        raise RuntimeError("Expected an assumed role in COLVENNA_ACCOUNT")
     if current.get_credentials().method != "iam-role":
         raise RuntimeError("Use the EC2 role credential chain; no static keys")
     return current, {key: identity[key] for key in ["Account", "Arn"]} | {
@@ -199,7 +199,7 @@ def push_image(current, local_tag, image_id, tag, log):
     if not existing:
         authorization = ecr.get_authorization_token()["authorizationData"][0]
         username, password = base64.b64decode(authorization["authorizationToken"]).decode().split(":", 1)
-        with tempfile.TemporaryDirectory(prefix="cove-image-docker-") as configuration:
+        with tempfile.TemporaryDirectory(prefix="colvenna-image-docker-") as configuration:
             environment = dict(os.environ, DOCKER_CONFIG=configuration)
             subprocess.run(["docker", "login", "--username", username, "--password-stdin",
                             authorization["proxyEndpoint"]], input=password.encode(), env=environment,
@@ -352,7 +352,7 @@ def main():
         }))
         print(repository["repositoryUri"] + "@" + detail["imageDigest"])
         return
-    token = "cove-core-" + uuid.uuid4().hex
+    token = "colvenna-core-" + uuid.uuid4().hex
     if args.operation in {"create", "update"}:
         head = source()
         if not args.image or not re.fullmatch(

@@ -4,7 +4,7 @@ import unittest
 
 from botocore.exceptions import ClientError
 
-from cove_duckdb.writer.consumer import archived_ingestion
+from colvenna_isle.writer.consumer import archived_ingestion
 
 SPACE, GENERATION = "probe_consumer_space", "gen_" + "a" * 32
 INGESTION = "ing_" + "b" * 64

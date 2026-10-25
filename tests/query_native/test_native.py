@@ -11,12 +11,12 @@ from unittest.mock import patch
 
 import duckdb
 
-from cove_duckdb.control.registry import ControlError
-from cove_duckdb.query import native
-from cove_duckdb.query.native import describe, stage
-from cove_duckdb.query.sql import Session, references
-from cove_duckdb.writer.ingestion import IngestionStore, digest
-from cove_duckdb.writer.writes import WriteStore, write_id
+from colvenna_isle.control.registry import ControlError
+from colvenna_isle.query import native
+from colvenna_isle.query.native import describe, stage
+from colvenna_isle.query.sql import Session, references
+from colvenna_isle.writer.ingestion import IngestionStore, digest
+from colvenna_isle.writer.writes import WriteStore, write_id
 from test_sql import definition
 
 
@@ -155,7 +155,7 @@ class NativeStaging(unittest.TestCase):
         columns = next(item["schema"] for item in self.snapshot.catalog if item["dataset"] == "ods.events")
         self.assertTrue(next(item["nullable"] for item in columns if item["name"] == "amount"))
         with self.assertRaises(ControlError):
-            self.snapshot.execute("SELECT _cove_operation FROM ods.events", 10)
+            self.snapshot.execute("SELECT _colvenna_operation FROM ods.events", 10)
 
     def direct(self, dataset, records, schema=None):
         value = copy.deepcopy(definition())
@@ -282,7 +282,7 @@ class NativeStaging(unittest.TestCase):
             named.close()
 
     def test_worker_stages_what_the_request_sql_names(self):
-        from cove_duckdb.query import worker
+        from colvenna_isle.query import worker
 
         self.direct("dwd.extra", [{"id": 5, "amount": "5.00", "at": "2026-10-16T00:00:00Z"}])
         self.writer.execute("CHECKPOINT warehouse")

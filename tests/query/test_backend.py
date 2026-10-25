@@ -18,14 +18,14 @@ from urllib.parse import urlsplit
 
 from botocore.exceptions import ReadTimeoutError
 
-from cove_duckdb.contracts.validation import validate
-from cove_duckdb.control.registry import ControlError, Principal
-from cove_duckdb.query.backend import Backend
-from cove_duckdb.query.jobs import Jobs
-from cove_duckdb.query.process import run
-from cove_duckdb.query.results import Results
-from cove_duckdb.query.runtime import Server
-from cove_duckdb.query.service import IDENTITY_HEADERS, Service
+from colvenna_isle.contracts.validation import validate
+from colvenna_isle.control.registry import ControlError, Principal
+from colvenna_isle.query.backend import Backend
+from colvenna_isle.query.jobs import Jobs
+from colvenna_isle.query.process import run
+from colvenna_isle.query.results import Results
+from colvenna_isle.query.runtime import Server
+from colvenna_isle.query.service import IDENTITY_HEADERS, Service
 from test_jobs import EXECUTOR, IMAGE, SOURCE, Storage
 
 

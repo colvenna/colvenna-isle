@@ -15,8 +15,8 @@
 #
 # Options:
 #   --environment NAME     environment name (2-12 lowercase letters or digits, starting with a letter); required
-#   --account ID           target AWS account (defaults to $COVE_ACCOUNT); must match the instance role's account
-#   --region NAME          target commercial AWS region (or COVE_REGION / AWS_REGION); required
+#   --account ID           target AWS account (defaults to $COLVENNA_ACCOUNT); must match the instance role's account
+#   --region NAME          target commercial AWS region (or COLVENNA_REGION / AWS_REGION); required
 #   --work-dir DIR         build environment, release and receipts (default: ../colvenna-isle-work); outside the repo
 #   --steps LIST           resume a failed install from the given install.py steps (after reconciling the failed one)
 #   --space ID             after installing: provision this space and issue its first administrator key
@@ -27,8 +27,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REGION="${COVE_REGION:-${AWS_REGION:-${AWS_DEFAULT_REGION:-}}}"
-PLAN="" ENVIRONMENT="" ACCOUNT="${COVE_ACCOUNT:-}" WORK="" STEPS="" SPACE="" TOKEN_OUTPUT="" EXPIRES_AT="" CHECK_ONLY=0
+REGION="${COLVENNA_REGION:-${AWS_REGION:-${AWS_DEFAULT_REGION:-}}}"
+PLAN="" ENVIRONMENT="" ACCOUNT="${COLVENNA_ACCOUNT:-}" WORK="" STEPS="" SPACE="" TOKEN_OUTPUT="" EXPIRES_AT="" CHECK_ONLY=0
 PASSTHROUGH=()
 
 usage() { sed -n '2,/^set -euo/p' "${BASH_SOURCE[0]}" | sed '$d' | sed 's/^# \{0,1\}//'; }
@@ -60,10 +60,10 @@ done
 
 [[ "$ENVIRONMENT" =~ ^[a-z][a-z0-9]{1,11}$ ]] || fail "--environment must be 2-12 lowercase letters or digits, starting with a letter"
 case "$ENVIRONMENT" in env|core|control|builder) fail "--environment $ENVIRONMENT is reserved" ;; esac
-[[ "$ACCOUNT" =~ ^[0-9]{12}$ ]] || fail "--account (or COVE_ACCOUNT) must be the 12-digit target account"
-[[ "$REGION" =~ ^[a-z]{2}(-[a-z]+)+-[1-9][0-9]*$ ]] || fail "set --region, COVE_REGION or AWS_REGION"
+[[ "$ACCOUNT" =~ ^[0-9]{12}$ ]] || fail "--account (or COLVENNA_ACCOUNT) must be the 12-digit target account"
+[[ "$REGION" =~ ^[a-z]{2}(-[a-z]+)+-[1-9][0-9]*$ ]] || fail "set --region, COLVENNA_REGION or AWS_REGION"
 case "$REGION" in cn-*|us-gov-*|us-iso*|eu-isoe-*|eusc-*) fail "only the commercial AWS partition is supported" ;; esac
-for configured in "${COVE_REGION:-}" "${AWS_REGION:-}" "${AWS_DEFAULT_REGION:-}"; do
+for configured in "${COLVENNA_REGION:-}" "${AWS_REGION:-}" "${AWS_DEFAULT_REGION:-}"; do
   [ -z "$configured" ] || [ "$configured" = "$REGION" ] || fail "configured AWS regions disagree with --region"
 done
 if [ -n "$SPACE" ] && [ -z "$TOKEN_OUTPUT" ]; then fail "--space needs --token-output"; fi
@@ -72,8 +72,8 @@ case "$WORK/" in "$ROOT"/*) fail "--work-dir must be outside the repository" ;; 
 
 # The operator tools accept only the EC2 instance-role credential chain, never a profile or static keys.
 AWS_ENV=(/usr/bin/env -u AWS_PROFILE -u AWS_DEFAULT_PROFILE -u AWS_ACCESS_KEY_ID -u AWS_SECRET_ACCESS_KEY
-         -u AWS_SESSION_TOKEN "COVE_REGION=$REGION" "AWS_REGION=$REGION" "AWS_DEFAULT_REGION=$REGION"
-         "COVE_ACCOUNT=$ACCOUNT" "COVE_ENVIRONMENT=$ENVIRONMENT")
+         -u AWS_SESSION_TOKEN "COLVENNA_REGION=$REGION" "AWS_REGION=$REGION" "AWS_DEFAULT_REGION=$REGION"
+         "COLVENNA_ACCOUNT=$ACCOUNT" "COLVENNA_ENVIRONMENT=$ENVIRONMENT")
 
 step "Preflight"
 [ "$(uname -m)" = aarch64 ] || fail "the deployment host must be ARM64 (aarch64); found $(uname -m)"

@@ -8,9 +8,9 @@ from datetime import datetime, timedelta, timezone
 
 from botocore.exceptions import ClientError, ReadTimeoutError
 
-from cove_duckdb.control.registry import ControlError
-from cove_duckdb.writer.intents import IntentUnknown, Intents
-from cove_duckdb.writer.writes import digest
+from colvenna_isle.control.registry import ControlError
+from colvenna_isle.writer.intents import IntentUnknown, Intents
+from colvenna_isle.writer.writes import digest
 
 
 DEFINITION = {

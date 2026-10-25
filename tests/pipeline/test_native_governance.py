@@ -12,11 +12,11 @@ from unittest.mock import patch
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from cove_duckdb.control.registry import ControlError, Principal, canonical
-from cove_duckdb.pipeline.input_exports import InputExports
-from cove_duckdb.pipeline.publications import resolve_release
-from cove_duckdb.query.native import stage
-from cove_duckdb.query.sql import Session
+from colvenna_isle.control.registry import ControlError, Principal, canonical
+from colvenna_isle.pipeline.input_exports import InputExports
+from colvenna_isle.pipeline.publications import resolve_release
+from colvenna_isle.query.native import stage
+from colvenna_isle.query.sql import Session
 from test_publications import EXACT, NativePublications
 import test_writer_publications as commands
 
@@ -40,7 +40,7 @@ class ReleaseRetention(NativePublications):
         self.assertEqual([(value["kind"], value["identity"]) for value in evidence], [("release", old["release_id"])])
         self.assertEqual(self.store.collect("col_two", [old["release_id"]], [], [], guard), [])
         tables = {row[0] for row in self.writer.execute(
-            "SELECT table_name FROM duckdb_tables() WHERE schema_name='_cove_data'").fetchall()}
+            "SELECT table_name FROM duckdb_tables() WHERE schema_name='_colvenna_data'").fetchall()}
         self.assertNotIn(old["physical"]["table"], tables)
         self.assertIn(current["physical"]["table"], tables)
         with self.assertRaisesRegex(ControlError, "PUBLICATION_RELEASE_COLLECTED"):
@@ -78,7 +78,7 @@ class ReleaseRetention(NativePublications):
 
 class SampledExport(NativePublications):
     def test_trial_sample_reads_at_most_the_requested_rows_of_the_same_exact_version(self):
-        from cove_duckdb.pipeline.native_inputs import capture
+        from colvenna_isle.pipeline.native_inputs import capture
 
         release = self.release("sampled", [[number, Decimal("1.00")] for number in range(1, 8)])
         binding = {"source": {"dataset": "dwd.result", "selection": {"mode": "snapshot"}}}
@@ -171,7 +171,7 @@ class TrialPreview(commands.WriterPublicationCommands):
                              "files": [{"path": "part-0.parquet", "rows": len(rows), "bytes": 100}]}}
 
     def preview(self, rows, actor_scopes=("pipeline:run", "query:read"), prepare=None):
-        from cove_duckdb.pipeline.candidates import Candidates
+        from colvenna_isle.pipeline.candidates import Candidates
 
         self.actor = Principal("owner", frozenset(["owned"]), frozenset(actor_scopes), "key_owner", "gen_owned")
         value = self.fixture.descriptor()
@@ -180,7 +180,7 @@ class TrialPreview(commands.WriterPublicationCommands):
                       "bytes": 10}
         with tempfile.TemporaryDirectory() as directory:
             values = [[9007199254740993, EXACT], [1, Decimal("0.10")], [2, Decimal("0.20")]]
-            with patch("cove_duckdb.pipeline.task_objects.TaskObjects.read",
+            with patch("colvenna_isle.pipeline.task_objects.TaskObjects.read",
                        return_value=canonical(self.descriptor).encode()), \
                     patch.object(Candidates, "prepare", side_effect=prepare or (
                         lambda *args, **kwargs: self.prepared(directory, values))):

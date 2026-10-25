@@ -10,8 +10,8 @@ from pathlib import Path
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from cove_duckdb.control.registry import ControlError
-from cove_duckdb.pipeline.parquet import describe, write
+from colvenna_isle.control.registry import ControlError
+from colvenna_isle.pipeline.parquet import describe, write
 
 
 COLUMNS = [{"name": name, "type": kind, "nullable": False} for name, kind in [

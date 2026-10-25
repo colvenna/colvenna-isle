@@ -15,12 +15,12 @@ from types import SimpleNamespace
 import duckdb
 from botocore.exceptions import ClientError
 
-from cove_duckdb.control.registry import ControlError, Principal, canonical
-from cove_duckdb.writer.backups import Backups
-from cove_duckdb.writer.ingestion import IngestionStore
-from cove_duckdb.writer.native_schema import physical
-from cove_duckdb.writer.scheduler import Scheduler
-from cove_duckdb.writer.writes import WriteStore, write_id
+from colvenna_isle.control.registry import ControlError, Principal, canonical
+from colvenna_isle.writer.backups import Backups
+from colvenna_isle.writer.ingestion import IngestionStore
+from colvenna_isle.writer.native_schema import physical
+from colvenna_isle.writer.scheduler import Scheduler
+from colvenna_isle.writer.writes import WriteStore, write_id
 from test_transactions import CONFIGURATION as INGESTION_CONFIGURATION
 from test_transactions import message, payload
 from test_writes import REGISTERED, request

@@ -86,7 +86,7 @@ def main():
     parameters = [{"ParameterKey": "BrowserSourceCommit", "ParameterValue": head}]
     parameters += [{"ParameterKey": name, "UsePreviousValue": True} for name in previous
                    if name != "BrowserSourceCommit"]
-    token = "cove-editor-" + uuid.uuid4().hex
+    token = "colvenna-editor-" + uuid.uuid4().hex
     save("change-set-admission", {"stack_id": baseline["StackId"], "source_commit": head,
         "client_request_token": token, "parameters": parameters,
         "template_sha256": hashlib.sha256(body.encode()).hexdigest()})

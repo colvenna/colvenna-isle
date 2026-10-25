@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-from cove_duckdb.region import regional
+from colvenna_isle.region import regional
 
 
 def ref(name):
@@ -260,49 +260,49 @@ def template():
             sub("${DataBucket.Arn}/spaces/*/query-intents/gen_*/*"),
             sub("${DataBucket.Arn}/spaces/*/query-results/gen_*/*")])])
     add("Authorizer", "AWS::Lambda::Function", Runtime="python3.12", Architectures=["arm64"],
-        Handler={"Fn::If": ["HasAuthCode", "cove_duckdb.control.authorizer.handler", "index.handler"]},
+        Handler={"Fn::If": ["HasAuthCode", "colvenna_isle.control.authorizer.handler", "index.handler"]},
         Role=get("AuthorizerRole", "Arn"), Timeout=10, MemorySize=256,
         LoggingConfig={"LogGroup": ref("AuthorizerLogs")},
-        Environment={"Variables": {"COVE_CONTROL_TABLE": ref("ControlTable"),
-                                   "COVE_AUTH_ENABLED": ref("AuthEnabled"),
-                                   "COVE_SOURCE_COMMIT": {"Fn::If": [
+        Environment={"Variables": {"COLVENNA_CONTROL_TABLE": ref("ControlTable"),
+                                   "COLVENNA_AUTH_ENABLED": ref("AuthEnabled"),
+                                   "COLVENNA_SOURCE_COMMIT": {"Fn::If": [
                                        "HasAuthCode", ref("AuthSourceCommit"), ref("SourceCommit")]}}},
         Code={"Fn::If": ["HasAuthCode", {"S3Bucket": ref("AuthCodeBucket"), "S3Key": ref("AuthCodeKey"),
                                         "S3ObjectVersion": ref("AuthCodeVersion")},
                          {"ZipFile": "def handler(event, context):\n    return {'isAuthorized': False}\n"}]}, Tags=tags)
     intake_environment = {"Variables": {
-        "COVE_CONTROL_TABLE": ref("ControlTable"), "COVE_DATA_BUCKET": ref("DataBucket"),
-        "COVE_INGRESS_QUEUE": ref("IngressQueue"), "COVE_ACCOUNT": ref("AWS::AccountId"),
-        "COVE_DLQ": ref("Dlq"),
-        "COVE_WRITER_CONTROL_FUNCTION": sub("${AWS::StackName}-writer-control"),
-        "COVE_INTAKE_ENABLED": ref("IntakeEnabled"), "COVE_TIMING": ref("Timing"),
-        "COVE_SOURCE_COMMIT": {"Fn::If": ["HasIntakeCode", ref("IntakeSourceCommit"), ref("SourceCommit")]},
+        "COLVENNA_CONTROL_TABLE": ref("ControlTable"), "COLVENNA_DATA_BUCKET": ref("DataBucket"),
+        "COLVENNA_INGRESS_QUEUE": ref("IngressQueue"), "COLVENNA_ACCOUNT": ref("AWS::AccountId"),
+        "COLVENNA_DLQ": ref("Dlq"),
+        "COLVENNA_WRITER_CONTROL_FUNCTION": sub("${AWS::StackName}-writer-control"),
+        "COLVENNA_INTAKE_ENABLED": ref("IntakeEnabled"), "COLVENNA_TIMING": ref("Timing"),
+        "COLVENNA_SOURCE_COMMIT": {"Fn::If": ["HasIntakeCode", ref("IntakeSourceCommit"), ref("SourceCommit")]},
     }}
     intake_code = {"S3Bucket": ref("IntakeCodeBucket"), "S3Key": ref("IntakeCodeKey"),
                    "S3ObjectVersion": ref("IntakeCodeVersion")}
     add("Intake", "AWS::Lambda::Function", Runtime="python3.12", Architectures=["arm64"],
-        Handler={"Fn::If": ["HasIntakeCode", "cove_duckdb.intake.handler.handler", "index.handler"]},
+        Handler={"Fn::If": ["HasIntakeCode", "colvenna_isle.intake.handler.handler", "index.handler"]},
         Role=get("IntakeRole", "Arn"), Timeout=60, MemorySize=256,
         LoggingConfig={"LogGroup": ref("IntakeLogs")}, Environment=intake_environment,
         Code={"Fn::If": ["HasIntakeCode", intake_code, {
             "ZipFile": "def handler(event, context):\n    return {'statusCode': 403, 'body': 'Unavailable'}\n"}]}, Tags=tags)
     resources["IntakeProbe"] = {"Type": "AWS::Lambda::Function", "Condition": "HasIntakeCode", "Properties": {
         "Runtime": "python3.12", "Architectures": ["arm64"],
-        "Handler": "cove_duckdb.intake.handler.probe_handler", "Role": get("IntakeRole", "Arn"),
+        "Handler": "colvenna_isle.intake.handler.probe_handler", "Role": get("IntakeRole", "Arn"),
         "Timeout": 60, "MemorySize": 256, "LoggingConfig": {"LogGroup": ref("IntakeLogs")},
         "Environment": intake_environment, "Code": intake_code, "Tags": tags,
     }}
     add("Sync", "AWS::Lambda::Function", Runtime="python3.12", Architectures=["arm64"],
         FunctionName=sub("${AWS::StackName}-sync"),
-        Handler={"Fn::If": ["HasSyncCode", "cove_duckdb.sync.handler.handler", "index.handler"]},
+        Handler={"Fn::If": ["HasSyncCode", "colvenna_isle.sync.handler.handler", "index.handler"]},
         Role=get("SyncRole", "Arn"), Timeout=28, MemorySize=256,
         LoggingConfig={"LogGroup": ref("SyncLogs")},
         VpcConfig={"SubnetIds": [ref("PrivateSubnet1"), ref("PrivateSubnet2")],
                    "SecurityGroupIds": [ref("SyncSecurityGroup")]},
         Environment={"Variables": {
-            "COVE_CONTROL_TABLE": ref("ControlTable"), "COVE_DATA_BUCKET": ref("DataBucket"),
-            "COVE_SYNC_ENABLED": ref("SyncEnabled"), "COVE_TIMING": ref("Timing"),
-            "COVE_SOURCE_COMMIT": {"Fn::If": ["HasSyncCode", ref("SyncSourceCommit"), ref("SourceCommit")]}}},
+            "COLVENNA_CONTROL_TABLE": ref("ControlTable"), "COLVENNA_DATA_BUCKET": ref("DataBucket"),
+            "COLVENNA_SYNC_ENABLED": ref("SyncEnabled"), "COLVENNA_TIMING": ref("Timing"),
+            "COLVENNA_SOURCE_COMMIT": {"Fn::If": ["HasSyncCode", ref("SyncSourceCommit"), ref("SourceCommit")]}}},
         Code={"Fn::If": ["HasSyncCode", {
             "S3Bucket": ref("SyncCodeBucket"), "S3Key": ref("SyncCodeKey"),
             "S3ObjectVersion": ref("SyncCodeVersion")}, {
@@ -310,15 +310,15 @@ def template():
         Tags=tags)
     resources["WriterControl"] = {"Type": "AWS::Lambda::Function", "Condition": "HasWriterCode", "Properties": {
         "FunctionName": sub("${AWS::StackName}-writer-control"),
-        "Runtime": "python3.12", "Architectures": ["arm64"], "Handler": "cove_duckdb.writer.bridge.handler",
+        "Runtime": "python3.12", "Architectures": ["arm64"], "Handler": "colvenna_isle.writer.bridge.handler",
         "Role": get("WriterControlRole", "Arn"), "Timeout": 30, "MemorySize": 256,
         "LoggingConfig": {"LogGroup": ref("TaskLogs")},
         "VpcConfig": {"SubnetIds": [ref("PrivateSubnet1"), ref("PrivateSubnet2")],
                       "SecurityGroupIds": [ref("WriterControlSecurityGroup")]},
         "Environment": {"Variables": {
-            "COVE_CONTROL_TABLE": ref("ControlTable"), "COVE_CLUSTER": ref("Cluster"),
-            "COVE_WRITER_PROBE_SPACE": ref("WriterProbeSpace"),
-            "COVE_SOURCE_COMMIT": ref("WriterSourceCommit")}},
+            "COLVENNA_CONTROL_TABLE": ref("ControlTable"), "COLVENNA_CLUSTER": ref("Cluster"),
+            "COLVENNA_WRITER_PROBE_SPACE": ref("WriterProbeSpace"),
+            "COLVENNA_SOURCE_COMMIT": ref("WriterSourceCommit")}},
         "Code": {"S3Bucket": ref("WriterCodeBucket"), "S3Key": ref("WriterCodeKey"),
                  "S3ObjectVersion": ref("WriterCodeVersion")}, "Tags": tags,
     }}
@@ -344,7 +344,7 @@ def template():
                 "Name": "baseline", "Image": ref("StorageImage"), "Essential": True,
                 "EntryPoint": ["python", "-c"], "Command": [code], "ReadonlyRootFilesystem": True,
                 "User": "10001:10001",
-                "Environment": [{"Name": "COVE_SOURCE_COMMIT", "Value": ref("SourceCommit")}],
+                "Environment": [{"Name": "COLVENNA_SOURCE_COMMIT", "Value": ref("SourceCommit")}],
                 "PortMappings": [{"ContainerPort": 8080}] if name == "QueryTask" else [],
                 "LogConfiguration": {"LogDriver": "awslogs", "Options": {
                     "awslogs-group": ref("TaskLogs"), "awslogs-region": "${AWS::Region}",
@@ -355,19 +355,19 @@ def template():
     container.update(
         Image={"Fn::If": ["HasWriterCode", ref("WriterImage"), ref("StorageImage")]},
         EntryPoint={"Fn::If": ["HasWriterCode",
-                             ["python", "-m", "cove_duckdb.writer.runtime"], ["python", "-c"]]},
+                             ["python", "-m", "colvenna_isle.writer.runtime"], ["python", "-c"]]},
         Command={"Fn::If": ["HasWriterCode", [], [
             "import time;print('baseline placeholder: business writer NOT_IMPLEMENTED',flush=True);time.sleep(86400)"]]},
         Environment=[{"Name": key, "Value": value} for key, value in {
-            "COVE_SOURCE_COMMIT": {"Fn::If": ["HasWriterCode", ref("WriterSourceCommit"), ref("SourceCommit")]},
-            "COVE_CONTROL_TABLE": ref("ControlTable"), "COVE_DATA_BUCKET": ref("DataBucket"),
-            "COVE_INGRESS_QUEUE": ref("IngressQueue"), "COVE_DLQ": ref("Dlq"), "COVE_REGION": ref("AWS::Region"), "AWS_REGION": ref("AWS::Region"), "AWS_DEFAULT_REGION": ref("AWS::Region"),
-            "COVE_ACCOUNT": ref("AWS::AccountId"), "COVE_INTAKE_SOURCE_COMMIT": ref("IntakeSourceCommit"),
-            "COVE_ENVIRONMENT_POLICY": ref("WriterEnvironmentPolicy"),
-            "COVE_QUERY_SOURCE_COMMIT": ref("QuerySourceCommit"), "COVE_QUERY_IMAGE": ref("QueryImage"),
-            "COVE_WRITER_PROBE_SPACE": ref("WriterProbeSpace"),
-            "COVE_WRITER_PROBE_GENERATION": ref("WriterProbeGeneration"), "COVE_TIMING": ref("Timing"),
-            "COVE_BACKUP_BUCKET": ref("BackupBucket"),
+            "COLVENNA_SOURCE_COMMIT": {"Fn::If": ["HasWriterCode", ref("WriterSourceCommit"), ref("SourceCommit")]},
+            "COLVENNA_CONTROL_TABLE": ref("ControlTable"), "COLVENNA_DATA_BUCKET": ref("DataBucket"),
+            "COLVENNA_INGRESS_QUEUE": ref("IngressQueue"), "COLVENNA_DLQ": ref("Dlq"), "COLVENNA_REGION": ref("AWS::Region"), "AWS_REGION": ref("AWS::Region"), "AWS_DEFAULT_REGION": ref("AWS::Region"),
+            "COLVENNA_ACCOUNT": ref("AWS::AccountId"), "COLVENNA_INTAKE_SOURCE_COMMIT": ref("IntakeSourceCommit"),
+            "COLVENNA_ENVIRONMENT_POLICY": ref("WriterEnvironmentPolicy"),
+            "COLVENNA_QUERY_SOURCE_COMMIT": ref("QuerySourceCommit"), "COLVENNA_QUERY_IMAGE": ref("QueryImage"),
+            "COLVENNA_WRITER_PROBE_SPACE": ref("WriterProbeSpace"),
+            "COLVENNA_WRITER_PROBE_GENERATION": ref("WriterProbeGeneration"), "COLVENNA_TIMING": ref("Timing"),
+            "COLVENNA_BACKUP_BUCKET": ref("BackupBucket"),
         }.items()],
         PortMappings=[{"ContainerPort": 8081}, {"ContainerPort": 8082}],
         MountPoints=[{"SourceVolume": "writer-work", "ContainerPath": "/work", "ReadOnly": False}],
@@ -377,17 +377,17 @@ def template():
     query["ContainerDefinitions"][0].update(
         Image={"Fn::If": ["HasQueryCode", ref("QueryImage"), ref("StorageImage")]},
         EntryPoint={"Fn::If": ["HasQueryCode",
-                             ["python", "-m", "cove_duckdb.query.runtime"], ["python", "-c"]]},
+                             ["python", "-m", "colvenna_isle.query.runtime"], ["python", "-c"]]},
         Command={"Fn::If": ["HasQueryCode", [], [health]]},
         Environment=[{"Name": key, "Value": value} for key, value in {
-            "COVE_SOURCE_COMMIT": {"Fn::If": ["HasQueryCode", ref("QuerySourceCommit"), ref("SourceCommit")]},
-            "COVE_CONTROL_TABLE": ref("ControlTable"), "COVE_DATA_BUCKET": ref("DataBucket"),
-            "COVE_REGION": ref("AWS::Region"), "AWS_REGION": ref("AWS::Region"), "AWS_DEFAULT_REGION": ref("AWS::Region"), "COVE_ACCOUNT": ref("AWS::AccountId"),
-            "COVE_QUERY_API_URL": get("Api", "ApiEndpoint"),
-            "COVE_QUERY_IMAGE": ref("QueryImage"), "COVE_WRITER_SOURCE_COMMIT": ref("WriterSourceCommit"),
-            "COVE_WRITER_IMAGE": ref("WriterImage"),
-            "COVE_WRITER_FUNCTION": sub("${AWS::StackName}-writer-control"),
-            "COVE_ECS_CLUSTER": ref("Cluster"), "COVE_TIMING": ref("Timing"),
+            "COLVENNA_SOURCE_COMMIT": {"Fn::If": ["HasQueryCode", ref("QuerySourceCommit"), ref("SourceCommit")]},
+            "COLVENNA_CONTROL_TABLE": ref("ControlTable"), "COLVENNA_DATA_BUCKET": ref("DataBucket"),
+            "COLVENNA_REGION": ref("AWS::Region"), "AWS_REGION": ref("AWS::Region"), "AWS_DEFAULT_REGION": ref("AWS::Region"), "COLVENNA_ACCOUNT": ref("AWS::AccountId"),
+            "COLVENNA_QUERY_API_URL": get("Api", "ApiEndpoint"),
+            "COLVENNA_QUERY_IMAGE": ref("QueryImage"), "COLVENNA_WRITER_SOURCE_COMMIT": ref("WriterSourceCommit"),
+            "COLVENNA_WRITER_IMAGE": ref("WriterImage"),
+            "COLVENNA_WRITER_FUNCTION": sub("${AWS::StackName}-writer-control"),
+            "COLVENNA_ECS_CLUSTER": ref("Cluster"), "COLVENNA_TIMING": ref("Timing"),
         }.items()],
         MountPoints=[{"SourceVolume": "query-work", "ContainerPath": "/work", "ReadOnly": False}],
         StopTimeout=30)
@@ -447,9 +447,9 @@ def template():
         ConnectionType="VPC_LINK", ConnectionId=ref("VpcLink"), PayloadFormatVersion="1.0",
         RequestParameters={"overwrite:path": "$request.path", **{
             "overwrite:header." + header: "$context.authorizer." + name for name, header in {
-                "principal_id": "x-cove-principal-id", "key_id": "x-cove-key-id",
-                "spaces": "x-cove-spaces", "scopes": "x-cove-scopes",
-                "generation": "x-cove-generation", "expires_at": "x-cove-expires-at",
+                "principal_id": "x-colvenna-principal-id", "key_id": "x-colvenna-key-id",
+                "spaces": "x-colvenna-spaces", "scopes": "x-colvenna-scopes",
+                "generation": "x-colvenna-generation", "expires_at": "x-colvenna-expires-at",
             }.items()}})
     for name, route, integration in [
         ("DefaultRoute", "$default", "IntakeIntegration"),
@@ -559,7 +559,7 @@ def template():
     })
     for resource in resources.values():
         if resource["Type"] == "AWS::Lambda::Function":
-            resource["Properties"].setdefault("Environment", {}).setdefault("Variables", {})["COVE_REGION"] = ref("AWS::Region")
+            resource["Properties"].setdefault("Environment", {}).setdefault("Variables", {})["COLVENNA_REGION"] = ref("AWS::Region")
     return regional({"AWSTemplateFormatVersion": "2010-09-09", "Description": "Colvenna Isle private AWS baseline",
             "Parameters": parameters,
             "Conditions": {

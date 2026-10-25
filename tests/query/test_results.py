@@ -3,9 +3,9 @@
 import copy
 import unittest
 
-from cove_duckdb.contracts.validation import ContractError, validate
-from cove_duckdb.control.registry import ControlError
-from cove_duckdb.query.results import Results
+from colvenna_isle.contracts.validation import ContractError, validate
+from colvenna_isle.control.registry import ControlError
+from colvenna_isle.query.results import Results
 from botocore.exceptions import ClientError, ReadTimeoutError
 import test_jobs
 from test_jobs import REAPED, Storage

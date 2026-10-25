@@ -13,11 +13,11 @@ from unittest.mock import patch
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from cove_duckdb.control.registry import ControlError, Principal
-from cove_duckdb.pipeline.input_exports import InputExports
-from cove_duckdb.writer.ingestion import CommitUnknown
-from cove_duckdb.writer.inputs import Inputs
-from cove_duckdb.writer.scheduler import Scheduler
+from colvenna_isle.control.registry import ControlError, Principal
+from colvenna_isle.pipeline.input_exports import InputExports
+from colvenna_isle.writer.ingestion import CommitUnknown
+from colvenna_isle.writer.inputs import Inputs
+from colvenna_isle.writer.scheduler import Scheduler
 from test_input_objects import ObjectStore
 import test_native_inputs as native_fixture
 
@@ -270,7 +270,7 @@ class WriterInputs(unittest.TestCase):
         # Every consumer ended: no capacity is reserved although retention has not expired.
         self.assertFalse(store.live(released))
         self.assertEqual(store.retained_bytes(), 0)
-        with patch("cove_duckdb.pipeline.input_exports.MAX_EXPORTS", 1):
+        with patch("colvenna_isle.pipeline.input_exports.MAX_EXPORTS", 1):
             self.inputs.execute({**self.request, "client_request_id": "next_original"})
         # A retry of the same job pins the original again while it is still retained.
         self.operation("input_retain", original["export_id"], consumer_id="job_one",
@@ -317,8 +317,8 @@ class WriterInputs(unittest.TestCase):
         self.assertFalse((self.database.work / "inputs").exists())
 
     def test_failed_partial_exports_keep_reserved_bytes_and_quota_precedes_next_capture(self):
-        from cove_duckdb.pipeline.input_objects import MAX_FILE_BYTES
-        from cove_duckdb.pipeline.native_inputs import capture
+        from colvenna_isle.pipeline.input_objects import MAX_FILE_BYTES
+        from colvenna_isle.pipeline.native_inputs import capture
 
         def partial(connection, configuration, bindings, directory, **kwargs):
             original_guard = kwargs["guard"]
@@ -331,8 +331,8 @@ class WriterInputs(unittest.TestCase):
             return capture(connection, configuration, bindings, directory,
                            **{**kwargs, "guard": fail_after_file_creation})
 
-        with patch("cove_duckdb.pipeline.input_exports.MAX_RETAINED_BYTES", MAX_FILE_BYTES):
-            with patch("cove_duckdb.writer.inputs.capture", partial):
+        with patch("colvenna_isle.pipeline.input_exports.MAX_RETAINED_BYTES", MAX_FILE_BYTES):
+            with patch("colvenna_isle.writer.inputs.capture", partial):
                 with self.assertRaisesRegex(ControlError, "CONTROLLED_PARTIAL_EXPORT"):
                     self.inputs.execute(self.request)
             record = json.loads(self.fixture.writer.execute(

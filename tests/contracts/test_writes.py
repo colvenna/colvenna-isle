@@ -1,7 +1,7 @@
 import copy
 import unittest
 
-from cove_duckdb.contracts.validation import ContractError, validate
+from colvenna_isle.contracts.validation import ContractError, validate
 
 
 DEFINITION = {

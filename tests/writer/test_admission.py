@@ -5,10 +5,10 @@ import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from cove_duckdb.control.registry import ControlError
+from colvenna_isle.control.registry import ControlError
 
 # The operator tools name their stacks from an explicit environment.
-os.environ.setdefault("COVE_ENVIRONMENT", "qa")
+os.environ.setdefault("COLVENNA_ENVIRONMENT", "qa")
 
 ROOT = Path(__file__).resolve().parents[2]
 SPEC = importlib.util.spec_from_file_location("writer_shared_control", ROOT / "scripts/aws/control.py")
@@ -47,8 +47,8 @@ class ExistingAdmissionTests(unittest.TestCase):
             controller.return_value.ownership.read.return_value = {"state": "STOPPED", "epoch": 1}
             result = CONTROL.stopped(self.client(), {
                 "Cluster": "cluster", "WriterService": "writer", "QueryService": "query"})
-            self.assertEqual(result["cove_task_terminal_receipts"][0]["taskArn"], "old")
-            self.assertEqual(result["cove_writer_ownership"]["state"], "STOPPED")
+            self.assertEqual(result["colvenna_task_terminal_receipts"][0]["taskArn"], "old")
+            self.assertEqual(result["colvenna_writer_ownership"]["state"], "STOPPED")
 
 
 if __name__ == "__main__":

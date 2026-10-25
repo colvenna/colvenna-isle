@@ -8,9 +8,9 @@ from concurrent.futures import ThreadPoolExecutor
 
 from botocore.exceptions import ClientError, ReadTimeoutError
 
-from cove_duckdb.control.environments import Environments
-from cove_duckdb.control.handler import handle
-from cove_duckdb.control.registry import ControlError, Principal, Registry, canonical
+from colvenna_isle.control.environments import Environments
+from colvenna_isle.control.handler import handle
+from colvenna_isle.control.registry import ControlError, Principal, Registry, canonical
 
 
 class Table:
@@ -220,7 +220,7 @@ class EnvironmentTests(unittest.TestCase):
         self.create()
         receipt = self.build()
         overrides = {x["name"]: x["value"] for x in self.builds.started[0]["environmentVariablesOverride"]}
-        reference = json.loads(overrides["COVE_ENVIRONMENT_SPECIFICATION_REF"])
+        reference = json.loads(overrides["COLVENNA_ENVIRONMENT_SPECIFICATION_REF"])
         self.assertEqual(reference["object_version"], "original-spec")
         self.assertEqual(self.builds.started[0]["idempotencyToken"], receipt["build_id"])
         self.assertEqual(self.builds.started[0]["sourceVersion"], "original-source-version")
@@ -228,8 +228,8 @@ class EnvironmentTests(unittest.TestCase):
                          "test-bucket/artifacts/builders/original.zip")
         self.assertEqual(self.builds.started[0]["sourceTypeOverride"], "S3")
         self.assertEqual(self.builds.started[0]["buildspecOverride"], "buildspec.yml")
-        self.assertEqual(reference["sha256"], overrides["COVE_ENVIRONMENT_SPECIFICATION_SHA256"])
-        self.assertNotIn("COVE_ENVIRONMENT_SPECIFICATION", overrides)
+        self.assertEqual(reference["sha256"], overrides["COLVENNA_ENVIRONMENT_SPECIFICATION_SHA256"])
+        self.assertNotIn("COLVENNA_ENVIRONMENT_SPECIFICATION", overrides)
 
     def test_actual_terminal_and_artifact_proof_are_required_before_ready(self):
         self.create()

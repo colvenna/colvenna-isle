@@ -15,7 +15,7 @@
 
 Python 从 context.json 的 orders 文件清单读取固定 Parquet，用 Decimal 保持金额精度，输出显式类型的 Parquet 与 output-manifest.json。运行环境和包版本随发布版本锁定；脚本不运行 pip install、不写原生 warehouse。
 
-本地 runner 使用 [当前机器合同](../../src/cove_duckdb/contracts/v1/contracts.schema.json) 校验 pipeline、完整 input_manifest/context 和 output_manifest。输入描述含 release、schema、水位、固定对象/hash/行数/字节数；其中 S3 URI/version 是 local fixture 标识，不会访问 AWS。实际本地文件和输出 Parquet 仍独立核对。业务脚本仅依赖 pandas/PyArrow，平台合同校验在 runner/adapter 边界执行。
+本地 runner 使用 [当前机器合同](../../src/colvenna_isle/contracts/v2/contracts.schema.json) 校验 pipeline、完整 input_manifest/context 和 output_manifest。输入描述含 release、schema、水位、固定对象/hash/行数/字节数；其中 S3 URI/version 是 local fixture 标识，不会访问 AWS。实际本地文件和输出 Parquet 仍独立核对。业务脚本仅依赖 pandas/PyArrow，平台合同校验在 runner/adapter 边界执行。
 
 [score_orders 配置详解](score-orders-guide.md) 逐项说明环境、资源、输入快照、超时和输出更新，包含 Lambda /tmp 文件布局及 output-manifest.json 示例。
 
@@ -26,9 +26,9 @@ Python 从 context.json 的 orders 文件清单读取固定 Parquet，用 Decima
 示例锁引用 [合同依赖锁](../../runtime/contracts-requirements.lock)，一起安装 JSON Schema/YAML 校验依赖。两份锁的 hash 共同组成验证环境；包版本范围不会在运行时重新解析。
 
 ```bash
-python3 -m venv /tmp/cove-pipeline-demo-venv
-/tmp/cove-pipeline-demo-venv/bin/python -m pip install --require-hashes -r examples/orders/requirements.lock
-/tmp/cove-pipeline-demo-venv/bin/python examples/orders/run_local.py
+python3 -m venv /tmp/colvenna-pipeline-demo-venv
+/tmp/colvenna-pipeline-demo-venv/bin/python -m pip install --require-hashes -r examples/orders/requirements.lock
+/tmp/colvenna-pipeline-demo-venv/bin/python examples/orders/run_local.py
 ```
 
 临时输入、context、输出和清单由脚本生成并在结束时删除。检查覆盖重复订单取最新版本、删除、退款、Python 分类、两天精确汇总、空结果类型及被篡改的输出 hash。预期 ADS：

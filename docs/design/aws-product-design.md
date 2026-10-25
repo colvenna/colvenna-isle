@@ -1,6 +1,6 @@
 # Colvenna Isle：AWS 数据库与分析产品设计
 
-当前未发行的 `1.2.0.dev0` 候选仅采用新品牌与部署命名空间，功能架构沿用下文的 1.1.0。栈、ECR、备份库、归属标签与运行时前缀统一采用 `colvenna-isle`；升级边界见[发行说明](../release-notes.md#120-unreleased)与[安装手册](../installation.md#10-破坏性升级)。不将历史 AWS 验收计入新候选。
+当前未发行的 `2.0.0.dev0` 候选采用 Colvenna 接口名、契约 revision 2 与原生格式 6，功能架构沿用下文的 1.1.0。标识与数据迁移见[迁移设计](identifier-migration.md)。栈、ECR、备份库、归属标签与运行时前缀统一采用 `colvenna-isle`；升级边界见[发行说明](../release-notes.md#200-unreleased)与[安装手册](../installation.md#10-破坏性升级)。不将历史 AWS 验收计入新候选。
 
 适用版本：1.1.0。本文描述 1.1.0 的产品架构；支持矩阵、规格与限制见[发行说明](../release-notes.md)。文中标为演进方向的内容（拆库、多 DuckDB 分片、Lambda Managed Instances / Durable Functions）尚未实现，不在 1.1.0 范围内。
 
@@ -23,7 +23,7 @@ API Gateway HTTP API
 
 直接业务表同步写使用独立 VPC Lambda，经当前许可写者的 8082 私网端口等待原生事务回执；不复用接入排队函数。只有显式 `write_owner: direct` 和 `data:write` 授权可修改目标。数据、原写入账本、变更记录和水位同事务持久提交后返回 `200`；超时保留原身份并核对 `UNKNOWN`。详见[同步写设计](synchronous-writes.md)。
 
-DynamoDB 使用一张 `cove-control` 控制面表，保存 API Key、空间路由和运行状态。接入 Lambda 将批次直接发送 SQS；接收、排队和 DuckDB 提交不经过 DynamoDB 事务或 Streams。认证仍由 Lambda Authorizer 查询控制表，认证服务不可用时拒绝访问。
+DynamoDB 使用一张 `colvenna-control` 控制面表，保存 API Key、空间路由和运行状态。接入 Lambda 将批次直接发送 SQS；接收、排队和 DuckDB 提交不经过 DynamoDB 事务或 Streams。认证仍由 Lambda Authorizer 查询控制表，认证服务不可用时拒绝访问。
 
 独立计算采用“固定输入版本 → Lambda / ECS Task 计算 → S3 暂存 → 写者分块导入 → 发布版本”。持续影响接入的分析写入负载，才触发将 `ODS+DWD` 与 `DWS+ADS` 拆成两个数据库的演进。
 
@@ -242,7 +242,7 @@ pandas 等包在受控构建阶段解析并锁定全部传递依赖，构建固�
 | 周期调度 | EventBridge Scheduler → 调度 Lambda | 分钟级唤醒，核对版本、依赖和水位；发布通知降低等待 |
 | 环境构建 | CodeBuild 或同等隔离构建服务 + ECR | 构建锁定依赖和适配器，保存镜像 digest 及部署绑定 |
 | 对象数据 | 同区域 S3 | 分离 raw、warehouse、dwd-releases、staging、query-results 前缀 |
-| 控制状态 | DynamoDB 单表 `cove-control` | Key/路由、流水线及环境 metadata、异步运行状态投影 |
+| 控制状态 | DynamoDB 单表 `colvenna-control` | Key/路由、流水线及环境 metadata、异步运行状态投影 |
 | 私网请求分发 | VPC Link + 内部 ALB | HTTP API 私网集成到 ALB 监听器，再转发给查询 Service 的 Task |
 | 运维 | CloudWatch | 队列、接入、作业、查询及存储 I/O 指标 |
 
@@ -268,7 +268,7 @@ Service 管理常驻 Task 的副本及生命周期，不要求绑定负载均衡
 
 ### 一张 DynamoDB 控制面表
 
-`cove-control` 使用 `PK` / `SK` 按实体组织记录：
+`colvenna-control` 使用 `PK` / `SK` 按实体组织记录：
 
 | 记录 | 主键组织示例 | 内容及权威来源 |
 | --- | --- | --- |

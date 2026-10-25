@@ -50,7 +50,7 @@ selection: snapshot 表示完整、固定的输入快照；processing.mode: full
 local_files 模式下，adapter 为每次实际 execution 创建独立目录。例如：
 
 ```text
-/tmp/cove/run_123/attempt_1/exec_1/
+/tmp/colvenna/run_123/attempt_1/exec_1/
 ├── context.json
 ├── input/
 │   └── orders/
@@ -71,7 +71,7 @@ context.json 提供实际 input 文件路径和 output.directory。业务脚本�
 
 ```json
 {
-  "contract_version": 1,
+  "contract_version": 2,
   "job_id": "job_123",
   "attempt_id": "attempt_1",
   "execution_id": "exec_1",

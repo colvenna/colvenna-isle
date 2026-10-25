@@ -15,7 +15,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
-from cove_duckdb.contracts.model import artifacts
+from colvenna_isle.contracts.model import artifacts
 
 
 def main():
@@ -26,7 +26,7 @@ def main():
     if args.source_commit and not re.fullmatch(r"[0-9a-f]{40}", args.source_commit):
         parser.error("--source-commit must be a full lowercase SHA")
     started = time.time_ns()
-    generated = ROOT / "src/cove_duckdb/contracts/v1"
+    generated = ROOT / "src/colvenna_isle/contracts/v2"
     for name, value in artifacts().items():
         expected = json.dumps(value, sort_keys=True, indent=2) + "\n"
         if (generated / name).read_text() != expected:
@@ -34,7 +34,7 @@ def main():
     suite = unittest.defaultTestLoader.discover(str(ROOT / "tests/contracts"))
     result = unittest.TextTestRunner(verbosity=2).run(suite)
     paths = sorted(set(
-        list((ROOT / "src/cove_duckdb").rglob("*.py"))
+        list((ROOT / "src/colvenna_isle").rglob("*.py"))
         + list(generated.glob("*.json"))
         + list((ROOT / "tests/contracts").rglob("*.py"))
         + [ROOT / "scripts/check_contracts.py", ROOT / "runtime/contracts-requirements.lock",

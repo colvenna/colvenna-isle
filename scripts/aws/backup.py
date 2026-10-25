@@ -6,7 +6,7 @@ create   the approved writer takes the native snapshot at one commit sequence; t
          adds the space's control records (never credentials), copies of its pipeline
          code and audit history, and publishes one backup manifest. The source is read only.
 inspect  re-read one backup by exact version and verify every referenced object.
-restore  into COVE_ENVIRONMENT's own stacks: provision the same space and generation,
+restore  into COLVENNA_ENVIRONMENT's own stacks: provision the same space and generation,
          bootstrap a new administrator, load the native snapshot through that
          environment's approved writer, then re-establish quota, retention policy and
          holds, runtime environments and pipelines through the public API.
@@ -34,12 +34,12 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(ROOT), str(ROOT / "src"), str(Path(__file__).parent)]
 from infra.backups import STACK, template
 from manage import ACCOUNT, STACKS, encode, outputs, owned_stack, session, source, update_stack, vault_bucket, wait
-from cove_duckdb.control.audit import Audit, operator_actor
-from cove_duckdb.control.keys import KeyStore
-from cove_duckdb.control.quotas import Quotas
-from cove_duckdb.control.registry import Registry, canonical
-from cove_duckdb.control.writer_client import WriterClient
-from cove_duckdb.writer.ownership import Ownership
+from colvenna_isle.control.audit import Audit, operator_actor
+from colvenna_isle.control.keys import KeyStore
+from colvenna_isle.control.quotas import Quotas
+from colvenna_isle.control.registry import Registry, canonical
+from colvenna_isle.control.writer_client import WriterClient
+from colvenna_isle.writer.ownership import Ownership
 
 # Control records restored or re-established; credentials, run history, status
 # projections (rebuilt from the native ledger) and query records are not.
@@ -177,7 +177,7 @@ def create(arguments, directory):
         {"space": records["space"], "environments": records["environments"]}) + "\n").encode())
     audit = operation.put(prefix + "control/audit.json", (canonical(records["audit"]) + "\n").encode())
     manifest = {
-        "format_version": 1, "kind": "cove_space_backup", "backup_id": backup_id, "space_id": space,
+        "format_version": 1, "kind": "colvenna_space_backup", "backup_id": backup_id, "space_id": space,
         "generation": generation, "created_at": stamp(), "point": native["point"],
         "native": {name: native["manifest"][name] for name in ["bucket", "key", "version_id", "sha256", "bytes"]},
         "control": control, "audit": audit, "artifacts": artifacts,
@@ -208,7 +208,7 @@ def inspect(operation, uri, version):
     if response["VersionId"] != version:
         raise RuntimeError("Backup manifest version differs")
     manifest = json.loads(raw)
-    if manifest.get("kind") != "cove_space_backup" or key != (
+    if manifest.get("kind") != "colvenna_space_backup" or key != (
             f"backups/{manifest['space_id']}/{manifest['generation']}/{manifest['backup_id']}/backup.json"):
         raise RuntimeError("Not a Colvenna Isle space backup manifest")
     native = json.loads(operation.get(manifest["native"]))
@@ -383,7 +383,7 @@ def restore(arguments, directory):
     native_seconds = time.monotonic() - started
     api = Api(operation, operation.values["ApiUrl"], bootstrap["token"])
     established = reestablish(operation, api, configuration, control, manifest["artifacts"], arguments.schedules)
-    receipt = {"format_version": 1, "kind": "cove_space_restore", "restore_id": restore_id, "backup": reference,
+    receipt = {"format_version": 1, "kind": "colvenna_space_restore", "restore_id": restore_id, "backup": reference,
                "space_id": space, "generation": generation, "target": {
                    "environment": STACKS["environment"], "baseline_stack_id": baseline["StackId"],
                    "data_bucket": operation.values["DataBucket"]},
@@ -420,7 +420,7 @@ def vault(directory):
         if outputs(existing).get("SourceCommit") == head:
             print(encode({"status": "UNCHANGED", "bucket": vault_bucket(operation.cf)}))
             return
-    token = "cove-backups-" + uuid.uuid4().hex
+    token = "colvenna-backups-" + uuid.uuid4().hex
     operation.save("admission", {"stack": STACK, "source_commit": head, "client_request_token": token,
                                  "template_sha256": hashlib.sha256(body.encode()).hexdigest()})
     kwargs = {"StackName": STACK, "TemplateBody": body, "ClientRequestToken": token,

@@ -13,13 +13,13 @@ from types import SimpleNamespace
 import duckdb
 from botocore.exceptions import ClientError
 
-from cove_duckdb.control.registry import ControlError, Principal
-from cove_duckdb.writer.direct import DirectWrites
-from cove_duckdb.writer.ingestion import IngestionStore
-from cove_duckdb.writer.intents import Intents
-from cove_duckdb.writer.scheduler import Scheduler
-from cove_duckdb.writer.writes import WriteStore, write_id
-from cove_duckdb.writer.write_qualification import WriteQualification
+from colvenna_isle.control.registry import ControlError, Principal
+from colvenna_isle.writer.direct import DirectWrites
+from colvenna_isle.writer.ingestion import IngestionStore
+from colvenna_isle.writer.intents import Intents
+from colvenna_isle.writer.scheduler import Scheduler
+from colvenna_isle.writer.writes import WriteStore, write_id
+from colvenna_isle.writer.write_qualification import WriteQualification
 from test_writes import REGISTERED, request
 
 

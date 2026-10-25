@@ -15,9 +15,9 @@ sys.path[:0] = [str(ROOT), str(ROOT / "src"), str(Path(__file__).parent)]
 from infra.control import template
 from infra.template import template as baseline_template
 from manage import ACCOUNT, STACKS, encode, outputs, owned_stack, publish_artifact, session, source, template_arguments, update_stack, wait
-from cove_duckdb.control.registry import Principal, Registry
-from cove_duckdb.control.keys import KeyStore
-from cove_duckdb.writer.controller import Controller
+from colvenna_isle.control.registry import Principal, Registry
+from colvenna_isle.control.keys import KeyStore
+from colvenna_isle.writer.controller import Controller
 
 
 def stopped(current, values):
@@ -29,8 +29,8 @@ def stopped(current, values):
             for field in ["desiredCount", "runningCount", "pendingCount"]):
         raise RuntimeError("Prove old services stopped before deployment/rebuild")
     controller = Controller(current, values, lambda name, value: None)
-    result["cove_task_terminal_receipts"] = controller.idle()
-    result["cove_writer_ownership"] = controller.ownership.read()
+    result["colvenna_task_terminal_receipts"] = controller.idle()
+    result["colvenna_writer_ownership"] = controller.ownership.read()
     return result
 
 
@@ -51,7 +51,7 @@ def deploy_authorizer(current, baseline, artifact, head, directory, *, enabled=F
     cf = current.client("cloudformation")
     (directory / "template.json").write_text(body + "\n")
     (directory / "validation.json").write_text(encode(cf.validate_template(**template_arguments(current, body))))
-    token = "cove-auth-" + uuid.uuid4().hex
+    token = "colvenna-auth-" + uuid.uuid4().hex
     (directory / "admission.json").write_text(encode({
         "stack_id": baseline["StackId"], "source_commit": head, "artifact": artifact,
         "auth_enabled": enabled, "client_request_token": token,
@@ -95,7 +95,7 @@ def main():
     if args.environment_configuration and args.operation != "deploy":
         parser.error("--environment-configuration is a deployment option")
     if args.baseline != STACKS["baseline"] or args.stack != STACKS["control"]:
-        parser.error("scope is the stacks of COVE_ENVIRONMENT=" + STACKS["environment"])
+        parser.error("scope is the stacks of COLVENNA_ENVIRONMENT=" + STACKS["environment"])
     directory = args.output.resolve()
     if directory.exists() or directory == ROOT or ROOT in directory.parents:
         parser.error("use a new external receipt directory")
@@ -143,9 +143,9 @@ def main():
         elif existing:
             configuration = current.client("lambda").get_function_configuration(
                 FunctionName=outputs(existing)["ControlFunction"])["Environment"]["Variables"]
-            if configuration.get("COVE_ENVIRONMENT_PROJECT"):
-                environment = {"project": configuration["COVE_ENVIRONMENT_PROJECT"],
-                               "policy": json.loads(configuration["COVE_ENVIRONMENT_POLICY"])}
+            if configuration.get("COLVENNA_ENVIRONMENT_PROJECT"):
+                environment = {"project": configuration["COLVENNA_ENVIRONMENT_PROJECT"],
+                               "policy": json.loads(configuration["COLVENNA_ENVIRONMENT_POLICY"])}
         if environment:
             builder_stack = cf.describe_stacks(StackName=STACKS["environments"])["Stacks"][0]
             builder_values = outputs(builder_stack)
@@ -200,7 +200,7 @@ def main():
         body = json.dumps(value, separators=(",", ":"))
         (directory / "template.json").write_text(body + "\n")
         (directory / "template-validation.json").write_text(encode(cf.validate_template(**template_arguments(current, body))))
-        token = "cove-control-" + uuid.uuid4().hex
+        token = "colvenna-control-" + uuid.uuid4().hex
         admission = {"source_commit": head, "baseline_stack_id": baseline["StackId"],
                      "stack": args.stack, "client_request_token": token, "artifact": binding,
                      "template_sha256": hashlib.sha256(body.encode()).hexdigest()}
@@ -253,7 +253,7 @@ def main():
                 os.close(descriptor)
                 destination.unlink()
     elif args.operation == "quota":
-        from cove_duckdb.control.quotas import Quotas
+        from colvenna_isle.control.quotas import Quotas
         if not args.policy_file:
             parser.error("--policy-file is required")
         registry = Registry(current.client("dynamodb"), values["ControlTable"], values["DataBucket"])
@@ -310,11 +310,11 @@ def enable_auth(current, cf, baseline, bundle, head, directory):
         with urllib.request.urlopen(configuration["Code"]["Location"], timeout=30) as stream:
             code = stream.read()
         with zipfile.ZipFile(io.BytesIO(code)) as archive:
-            provenance = json.loads(archive.read("cove-source.json"))
+            provenance = json.loads(archive.read("colvenna-source.json"))
         checks.append({"function": function, "zip_sha256": hashlib.sha256(code).hexdigest(),
                        "source_commit": provenance["source_commit"],
                        "environment_source": configuration["Configuration"]["Environment"]["Variables"].get(
-                           "COVE_SOURCE_COMMIT")})
+                           "COLVENNA_SOURCE_COMMIT")})
     for name, token in [("missing", None), ("invalid", "x" * 48)]:
         event = json.dumps({"headers": {"authorization": "Bearer " + token} if token else {}}).encode()
         for function in [control["AuthProbeFunction"], values["AuthorizerFunction"]]:
@@ -355,8 +355,8 @@ GENERATION_PREFIXES = ["ingest", "ingestion-replay", "inputs", "pipeline-code", 
 def purge_generation(current, values, space, generation, execute, identity, directory):
     """Delete a generation a space rebuild replaced: only after the rebuild invalidated every old reference."""
     import re
-    from cove_duckdb.control.audit import Audit, operator_actor
-    from cove_duckdb.writer.ownership import Ownership
+    from colvenna_isle.control.audit import Audit, operator_actor
+    from colvenna_isle.writer.ownership import Ownership
 
     if not generation or not re.fullmatch(r"gen_[0-9a-f]{32}", generation):
         raise RuntimeError("Name one exact generation")

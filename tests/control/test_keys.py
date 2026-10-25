@@ -5,10 +5,10 @@ import unittest
 
 from botocore.exceptions import ClientError
 
-from cove_duckdb.control.authorizer import authorize
-from cove_duckdb.control.handler import handle
-from cove_duckdb.control.keys import KeyStore
-from cove_duckdb.control.registry import ControlError, Principal
+from colvenna_isle.control.authorizer import authorize
+from colvenna_isle.control.handler import handle
+from colvenna_isle.control.keys import KeyStore
+from colvenna_isle.control.registry import ControlError, Principal
 
 
 IDENTITY = Principal("owner", frozenset(["space_a"]), frozenset(["datasets:manage"]),

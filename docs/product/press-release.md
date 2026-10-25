@@ -72,4 +72,4 @@ Colvenna Isle 面向需要通过 API 汇集业务数据、建立 SQL/Python 加�
 
 开发者通过 API 持续接入数据，数据团队通过 SQL 和 Python 构建可复用的数据集，管理员通过控制台管理运行状态和访问权限。接入回执、处理水位与发布版本贯穿整个流程，使团队能够从一笔写入追踪到其对应的分析结果。
 
-产品前身的历史版本 1.0.0 于 2026-10-20 首次发行，1.1.0 于 2026-10-21 发行。Colvenna Isle 名称从下一版本采用，当前 `1.2.0.dev0` 尚未发行，改名后的 AWS 验收为 `NOT_RUN`。产品以一组 CloudFormation 栈部署在用户自己的 AWS 账号中，费用就是该账号中实际使用的 AWS 资源费用。历史 1.1.0 部署在单个 AWS 账号中、安装时指定的标准 AWS 商业区域（已在 `us-east-2` 与 `us-west-2` 验收），运行于 ARM64（Graviton），写者与查询服务规格为 2 vCPU / 4 GiB。支持矩阵、规格、限制与历史实测基线见[发行说明](../release-notes.md)和[性能与容量基线](../performance.md)；安装与使用方式见[安装部署手册](../installation.md)、[用户手册](../user-guide.md)和 [quickstart](../../examples/quickstart/README.md)。
+产品前身的历史版本 1.0.0 于 2026-10-20 首次发行，1.1.0 于 2026-10-21 发行。Colvenna Isle 名称从下一版本采用，当前 `2.0.0.dev0` 尚未发行，改名后的 AWS 验收为 `NOT_RUN`。产品以一组 CloudFormation 栈部署在用户自己的 AWS 账号中，费用就是该账号中实际使用的 AWS 资源费用。历史 1.1.0 部署在单个 AWS 账号中、安装时指定的标准 AWS 商业区域（已在 `us-east-2` 与 `us-west-2` 验收），运行于 ARM64（Graviton），写者与查询服务规格为 2 vCPU / 4 GiB。支持矩阵、规格、限制与历史实测基线见[发行说明](../release-notes.md)和[性能与容量基线](../performance.md)；安装与使用方式见[安装部署手册](../installation.md)、[用户手册](../user-guide.md)和 [quickstart](../../examples/quickstart/README.md)。

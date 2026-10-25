@@ -1,6 +1,6 @@
 # Colvenna Isle 用户手册
 
-当前源码为未发行的 `1.2.0.dev0` 改名候选，API 与数据库行为沿用 1.1.0。下文的 AWS 验收属于历史版本；候选的运行时验收为 `NOT_RUN`，见[发行说明](release-notes.md#120-unreleased)。
+当前源码为未发行的 `2.0.0.dev0` 候选。包、配置、协议头与系统列统一采用 Colvenna 名称，契约 revision 为 2，原生格式为 6；1.x 用户需按[迁移设计](design/identifier-migration.md)升级。下文的 AWS 验收属于历史版本；候选的运行时验收为 `NOT_RUN`，见[发行说明](release-notes.md#200-unreleased)。
 
 本手册面向应用开发者、数据工程师和分析人员，说明如何在一个已安装的 Colvenna Isle 环境中工作：
 
@@ -124,9 +124,9 @@
 本手册的示例使用以下环境变量：
 
 ```bash
-export COVE_API_URL=<api-url>      # ApiUrl
-export COVE_API_KEY=<api-key>      # 具有所需 scope 的 Key
-export COVE_SPACE=<space_id>       # 例如 sales_prod
+export COLVENNA_API_URL=<api-url>      # ApiUrl
+export COLVENNA_API_KEY=<api-key>      # 具有所需 scope 的 Key
+export COLVENNA_SPACE=<space_id>       # 例如 sales_prod
 ```
 
 ### 2.2 认证
@@ -139,7 +139,7 @@ Authorization: Bearer <API_KEY>
 
 - 每次请求都实时校验 Key：存在、未吊销、未过期、属于空间当前的 generation。吊销立即生效。
 - 缺少凭证返回 `401`；Key 无效、已吊销、已过期，或者缺少所需的空间或 scope，返回 `403`。
-- 服务端只信任 Key 本身。请求体中的身份、空间或 scope 字段不会扩大权限。不要发送以 `x-cove-` 开头的请求头；同步写会以 `400 INTERNAL_IDENTITY_FORBIDDEN` 拒绝这类请求。
+- 服务端只信任 Key 本身。请求体中的身份、空间或 scope 字段不会扩大权限。不要发送以 `x-colvenna-` 开头的请求头；同步写会以 `400 INTERNAL_IDENTITY_FORBIDDEN` 拒绝这类请求。
 
 ### 2.3 请求格式
 
@@ -268,8 +268,8 @@ Authorization: Bearer <API_KEY>
 需要 `keys:manage`：
 
 ```bash
-curl -s "$COVE_API_URL/v1/admin/spaces/$COVE_SPACE/api-keys" \
-  -H "Authorization: Bearer $COVE_API_KEY"
+curl -s "$COLVENNA_API_URL/v1/admin/spaces/$COLVENNA_SPACE/api-keys" \
+  -H "Authorization: Bearer $COLVENNA_API_KEY"
 ```
 
 返回 `{"keys": [...]}`，每项包含：
@@ -293,8 +293,8 @@ curl -s "$COVE_API_URL/v1/admin/spaces/$COVE_SPACE/api-keys" \
 需要 `keys:manage`：
 
 ```bash
-curl -s -X POST "$COVE_API_URL/v1/admin/spaces/$COVE_SPACE/api-keys" \
-  -H "Authorization: Bearer $COVE_API_KEY" -H "Content-Type: application/json" \
+curl -s -X POST "$COLVENNA_API_URL/v1/admin/spaces/$COLVENNA_SPACE/api-keys" \
+  -H "Authorization: Bearer $COLVENNA_API_KEY" -H "Content-Type: application/json" \
   -d '{"name": "orders-ingestion", "scopes": ["ingest:write"], "expires_at": "2027-01-15T00:00:00Z"}'
 ```
 
@@ -326,8 +326,8 @@ curl -s -X POST "$COVE_API_URL/v1/admin/spaces/$COVE_SPACE/api-keys" \
 轮换为一个 Key 签发唯一的替代 Key，替代 Key 沿用原 principal。原 principal 的接入、写入、查询和运行仍归替代 Key 所有。需要 `keys:manage`：
 
 ```bash
-curl -s -X POST "$COVE_API_URL/v1/admin/spaces/$COVE_SPACE/api-keys/<key_id>/rotate" \
-  -H "Authorization: Bearer $COVE_API_KEY" -H "Content-Type: application/json" \
+curl -s -X POST "$COLVENNA_API_URL/v1/admin/spaces/$COLVENNA_SPACE/api-keys/<key_id>/rotate" \
+  -H "Authorization: Bearer $COLVENNA_API_KEY" -H "Content-Type: application/json" \
   -d '{"name": "orders-ingestion-2027", "scopes": ["ingest:write"], "expires_at": "2027-06-30T00:00:00Z"}'
 ```
 
@@ -339,8 +339,8 @@ curl -s -X POST "$COVE_API_URL/v1/admin/spaces/$COVE_SPACE/api-keys/<key_id>/rot
 ### 3.6 吊销 Key
 
 ```bash
-curl -s -X POST "$COVE_API_URL/v1/admin/spaces/$COVE_SPACE/api-keys/<key_id>/revoke" \
-  -H "Authorization: Bearer $COVE_API_KEY" -H "Content-Type: application/json" -d '{}'
+curl -s -X POST "$COLVENNA_API_URL/v1/admin/spaces/$COLVENNA_SPACE/api-keys/<key_id>/revoke" \
+  -H "Authorization: Bearer $COLVENNA_API_KEY" -H "Content-Type: application/json" -d '{}'
 ```
 
 - 返回 `200` 和状态为 `REVOKED` 的 Key 元数据。吊销立即生效，Key 的审计身份保留。重复吊销返回同样的结果。
@@ -357,8 +357,8 @@ Key 到期后状态显示为 `EXPIRED`，所有请求被拒绝。到期时间不
 ### 4.1 查看空间配置
 
 ```bash
-curl -s "$COVE_API_URL/v1/admin/spaces/$COVE_SPACE/configuration" \
-  -H "Authorization: Bearer $COVE_API_KEY"
+curl -s "$COLVENNA_API_URL/v1/admin/spaces/$COLVENNA_SPACE/configuration" \
+  -H "Authorization: Bearer $COLVENNA_API_KEY"
 ```
 
 返回空间的当前配置，主要字段：
@@ -395,11 +395,11 @@ curl -s "$COVE_API_URL/v1/admin/spaces/$COVE_SPACE/configuration" \
 [quickstart](../examples/quickstart/README.md) 注册的订单事件表：
 
 ```bash
-GENERATION=$(curl -s "$COVE_API_URL/v1/admin/spaces/$COVE_SPACE/configuration" \
-  -H "Authorization: Bearer $COVE_API_KEY" | python3 -c 'import json,sys; print(json.load(sys.stdin)["generation"])')
+GENERATION=$(curl -s "$COLVENNA_API_URL/v1/admin/spaces/$COLVENNA_SPACE/configuration" \
+  -H "Authorization: Bearer $COLVENNA_API_KEY" | python3 -c 'import json,sys; print(json.load(sys.stdin)["generation"])')
 
-curl -s -X POST "$COVE_API_URL/v1/admin/spaces/$COVE_SPACE/datasets" \
-  -H "Authorization: Bearer $COVE_API_KEY" -H "Content-Type: application/json" \
+curl -s -X POST "$COLVENNA_API_URL/v1/admin/spaces/$COLVENNA_SPACE/datasets" \
+  -H "Authorization: Bearer $COLVENNA_API_KEY" -H "Content-Type: application/json" \
   -H "If-Match: \"$GENERATION\"" -d @- <<'JSON'
 {
   "dataset": "ods.orders",
@@ -528,7 +528,7 @@ JSON
 ### 4.6 命名与上限
 
 - 数据集名全部小写。列名在 DuckDB 中不区分大小写，同一数据集内不能只靠大小写区分。
-- 列名不能以 `_cove_` 开头；这个前缀保留给系统列。
+- 列名不能以 `_colvenna_` 开头；这个前缀保留给系统列。
 - 每个空间最多 64 个数据集（`413 DATASET_LIMIT`），整个空间配置最多 350,000 字节（`413 CONFIGURATION_TOO_LARGE`）。
 
 ### 4.7 版本与变更规则
@@ -546,8 +546,8 @@ JSON
 需要 `ingest:write` 和 `Idempotency-Key`：
 
 ```bash
-curl -s -X POST "$COVE_API_URL/v1/spaces/$COVE_SPACE/ingestions" \
-  -H "Authorization: Bearer $COVE_API_KEY" -H "Content-Type: application/json" \
+curl -s -X POST "$COLVENNA_API_URL/v1/spaces/$COLVENNA_SPACE/ingestions" \
+  -H "Authorization: Bearer $COLVENNA_API_KEY" -H "Content-Type: application/json" \
   -H "Idempotency-Key: orders-2026-10-14-batch-001" -d @- <<'JSON'
 {
   "dataset": "orders",
@@ -606,15 +606,15 @@ ODS 是只追加的事件历史，不覆盖、不物理删除旧事件：
 
 每个新的有效批次获得一个提交序号。
 
-提示：直接查询 ODS 表时，只返回注册的业务列。删除事件显示为非键列为 `NULL` 的行，结果中不包含操作类型。要得到“每个键的当前状态”，请用流水线（流水线的 ODS 输入额外带 `_cove_operation` 和 `_cove_commit_sequence` 两列，见 [8.5 节](#85-输入输出与-sql-任务)）。
+提示：直接查询 ODS 表时，只返回注册的业务列。删除事件显示为非键列为 `NULL` 的行，结果中不包含操作类型。要得到“每个键的当前状态”，请用流水线（流水线的 ODS 输入额外带 `_colvenna_operation` 和 `_colvenna_commit_sequence` 两列，见 [8.5 节](#85-输入输出与-sql-任务)）。
 
 ### 5.5 查询接入状态
 
 批次的原 principal（持有 `ingest:write`），或持有 `monitor:read` 的 Key，可以读取状态：
 
 ```bash
-curl -s "$COVE_API_URL/v1/spaces/$COVE_SPACE/ingestions/<ingestion_id>" \
-  -H "Authorization: Bearer $COVE_API_KEY"
+curl -s "$COLVENNA_API_URL/v1/spaces/$COLVENNA_SPACE/ingestions/<ingestion_id>" \
+  -H "Authorization: Bearer $COLVENNA_API_KEY"
 ```
 
 ```json
@@ -701,8 +701,8 @@ curl -s "$COVE_API_URL/v1/spaces/$COVE_SPACE/ingestions/<ingestion_id>" \
 - 持有 `monitor:read` 的 Key 可以读取诊断：
 
   ```bash
-  curl -s "$COVE_API_URL/v1/spaces/$COVE_SPACE/ingestions/<ingestion_id>/diagnostics" \
-    -H "Authorization: Bearer $COVE_API_KEY"
+  curl -s "$COLVENNA_API_URL/v1/spaces/$COLVENNA_SPACE/ingestions/<ingestion_id>/diagnostics" \
+    -H "Authorization: Bearer $COLVENNA_API_KEY"
   ```
 
   返回原生状态 `native_status`（`COMMITTED`、`FAILED` 或 `UNKNOWN`）、最多 32 次处理尝试（`attempts`，含 `error_code` 和观测时间）、DLQ 核对记录、队列积压与写者处理能力的观测（`queue`）、保留期限（`retention`）和剩余重放窗口（`replay_window_seconds`）。诊断不返回记录内容。
@@ -710,8 +710,8 @@ curl -s "$COVE_API_URL/v1/spaces/$COVE_SPACE/ingestions/<ingestion_id>" \
 - 原批次因暂时性故障没有提交时，可以请求重放。重放重新发送**原来归档的内容**，不能修改数据。需要批次的原 principal，同时持有 `ingest:write` 和 `ingest:replay`：
 
   ```bash
-  curl -s -X POST "$COVE_API_URL/v1/spaces/$COVE_SPACE/ingestions/<ingestion_id>/replay" \
-    -H "Authorization: Bearer $COVE_API_KEY" -H "Content-Type: application/json" -d '{}'
+  curl -s -X POST "$COLVENNA_API_URL/v1/spaces/$COLVENNA_SPACE/ingestions/<ingestion_id>/replay" \
+    -H "Authorization: Bearer $COLVENNA_API_KEY" -H "Content-Type: application/json" -d '{}'
   ```
 
   | 响应 | 含义 |
@@ -762,8 +762,8 @@ curl -s "$COVE_API_URL/v1/spaces/$COVE_SPACE/ingestions/<ingestion_id>" \
 插入一行：
 
 ```bash
-curl -s -X POST "$COVE_API_URL/v1/spaces/$COVE_SPACE/writes" \
-  -H "Authorization: Bearer $COVE_API_KEY" -H "Content-Type: application/json" \
+curl -s -X POST "$COLVENNA_API_URL/v1/spaces/$COLVENNA_SPACE/writes" \
+  -H "Authorization: Bearer $COLVENNA_API_KEY" -H "Content-Type: application/json" \
   -H "Idempotency-Key: account-1-create" \
   -d '{"dataset": "dwd.accounts", "schema_version": 1, "operation": "insert",
        "records": [{"id": 1, "name": "first account", "balance": "100.00"}]}'
@@ -858,8 +858,8 @@ DuckDB 1.5.6 的一个限制：如果某一行被其他表的外键引用，那�
 原 principal（持有 `data:write`），或持有 `datasets:manage` 的 Key，可以读取写入回执：
 
 ```bash
-curl -s "$COVE_API_URL/v1/spaces/$COVE_SPACE/writes/<write_id>" \
-  -H "Authorization: Bearer $COVE_API_KEY"
+curl -s "$COLVENNA_API_URL/v1/spaces/$COLVENNA_SPACE/writes/<write_id>" \
+  -H "Authorization: Bearer $COLVENNA_API_KEY"
 ```
 
 - 返回原回执（`COMMITTED` 或 `REJECTED`）。回执来自写者的原生账本，是权威结果。
@@ -890,7 +890,7 @@ curl -s "$COVE_API_URL/v1/spaces/$COVE_SPACE/writes/<write_id>" \
 需要 `query:read`：
 
 ```bash
-curl -s "$COVE_API_URL/v1/spaces/$COVE_SPACE/catalog" -H "Authorization: Bearer $COVE_API_KEY"
+curl -s "$COLVENNA_API_URL/v1/spaces/$COLVENNA_SPACE/catalog" -H "Authorization: Bearer $COLVENNA_API_KEY"
 ```
 
 返回 `{"datasets": [{"dataset": "ads.dashboard", "schema": [...]}, ...]}`，只包含已注册、可查询的数据集及其列和类型。内部账本和未发布的数据不在其中。
@@ -900,8 +900,8 @@ curl -s "$COVE_API_URL/v1/spaces/$COVE_SPACE/catalog" -H "Authorization: Bearer 
 需要 `query:read`：
 
 ```bash
-curl -s -X POST "$COVE_API_URL/v1/spaces/$COVE_SPACE/queries" \
-  -H "Authorization: Bearer $COVE_API_KEY" -H "Content-Type: application/json" \
+curl -s -X POST "$COLVENNA_API_URL/v1/spaces/$COLVENNA_SPACE/queries" \
+  -H "Authorization: Bearer $COLVENNA_API_KEY" -H "Content-Type: application/json" \
   -d '{"sql": "SELECT order_date, revenue, order_count FROM ads.dashboard ORDER BY order_date",
        "client_request_id": "dashboard_2026_10_15_001",
        "consistency": "published", "max_rows": 1000, "timeout_ms": 30000}'
@@ -939,7 +939,7 @@ SQL 规则：
 ### 7.3 轮询与结果
 
 ```bash
-curl -s "$COVE_API_URL/v1/spaces/$COVE_SPACE/queries/<query_id>" -H "Authorization: Bearer $COVE_API_KEY"
+curl -s "$COLVENNA_API_URL/v1/spaces/$COLVENNA_SPACE/queries/<query_id>" -H "Authorization: Bearer $COLVENNA_API_KEY"
 ```
 
 | 状态 | 含义 |
@@ -996,7 +996,7 @@ curl -s "$COVE_API_URL/v1/spaces/$COVE_SPACE/queries/<query_id>" -H "Authorizati
 - 导出：每次读取成功的查询，都会生成一个新的 `export_url`，有效期最长 2 分钟。请求它时同样要带 `Authorization` 头；它返回完整的类型化 JSON 结果（`columns`、`rows`、`data_versions`、`truncated`）。复制出去的地址不能被其他 principal 使用。
 
   ```bash
-  curl -s "<export_url>" -H "Authorization: Bearer $COVE_API_KEY" -o result.json
+  curl -s "<export_url>" -H "Authorization: Bearer $COLVENNA_API_KEY" -o result.json
   ```
 
 - 结果在生成后 10 分钟过期。过期后分页返回 `410 QUERY_RESULT_EXPIRED`，导出链接过期返回 `410 QUERY_LINK_EXPIRED`。过期结果不会自动重算；需要时用新的 `client_request_id` 再提交一次。
@@ -1009,8 +1009,8 @@ curl -s "$COVE_API_URL/v1/spaces/$COVE_SPACE/queries/<query_id>" -H "Authorizati
 ### 7.6 取消
 
 ```bash
-curl -s -X POST "$COVE_API_URL/v1/spaces/$COVE_SPACE/queries/<query_id>/cancel" \
-  -H "Authorization: Bearer $COVE_API_KEY" -H "Content-Type: application/json" -d '{}'
+curl -s -X POST "$COLVENNA_API_URL/v1/spaces/$COLVENNA_SPACE/queries/<query_id>/cancel" \
+  -H "Authorization: Bearer $COLVENNA_API_KEY" -H "Content-Type: application/json" -d '{}'
 ```
 
 - 排队中、尚未开始执行的查询直接变为 `CANCELLED`。运行中的查询先变为 `CANCELLING`，执行进程终止后变为 `CANCELLED`。
@@ -1214,14 +1214,14 @@ SQL 任务：
 - 每个输入别名在 SQL 中是一张只读表，例如 orders 示例的 `events`、`orders`、`scores`、`daily`。
 - 代码文件必须恰好是一条 `SELECT`（可带 `WITH`）。DML、DDL、`ATTACH`、`COPY`、`PRAGMA`、`SET` 和多条语句以 `SQL_READ_ONLY_REQUIRED` 失败；读取文件的函数以 `SQL_EXTERNAL_ACCESS_FORBIDDEN` 失败。
 - 结果列的名称、顺序和 DuckDB 类型必须与 `output.schema` 逐列相同（`merge_keys` 为下文的 wire schema），否则以 `SQL_SCHEMA_MISMATCH` 失败。不会做隐式类型转换，请用 `CAST` 写出声明的类型，例如 `CAST(sum(amount) AS DECIMAL(38,2))`。
-- ODS 输入除注册列外还有 `_cove_operation`（`append` / `upsert` / `delete`）和 `_cove_commit_sequence` 两列。`snapshot` 包含全部历史事件（包括旧版本和删除），需要自行按键取最新版本，例如：
+- ODS 输入除注册列外还有 `_colvenna_operation`（`append` / `upsert` / `delete`）和 `_colvenna_commit_sequence` 两列。`snapshot` 包含全部历史事件（包括旧版本和删除），需要自行按键取最新版本，例如：
 
   ```sql
   WITH ranked AS (
       SELECT *,
              row_number() OVER (
                  PARTITION BY order_id
-                 ORDER BY source_version DESC, _cove_commit_sequence DESC
+                 ORDER BY source_version DESC, _colvenna_commit_sequence DESC
              ) AS version_rank
       FROM events
   )
@@ -1229,7 +1229,7 @@ SQL 任务：
          CAST(event_time AS DATE) AS order_date,
          CAST(amount AS DECIMAL(18,2)) AS amount
   FROM ranked
-  WHERE version_rank = 1 AND _cove_operation <> 'delete';
+  WHERE version_rank = 1 AND _colvenna_operation <> 'delete';
   ```
 
 ### 8.6 Python 任务
@@ -1283,13 +1283,13 @@ Python 输出的类型映射、增量任务的 `context.processing`、`merge_key
         - {name: order_date, type: DATE, nullable: false}
         - {name: amount, type: "DECIMAL(18,2)", nullable: false}
       change_metadata:
-        - {name: _cove_version, type: BIGINT, nullable: false}
-        - {name: _cove_sequence, type: BIGINT, nullable: false}
+        - {name: _colvenna_version, type: BIGINT, nullable: false}
+        - {name: _colvenna_sequence, type: BIGINT, nullable: false}
 ```
 
 - `processing.bootstrap` 必须是 `full`，并且必须声明 `on_missing_state`（`fail` 或 `full`）。首次运行，或任务定义、代码、执行器、环境、参数相对上一 release 有变化时，从空状态完整重建；上一 release 缺少状态时按 `on_missing_state` 处理。
-- `change_metadata` 固定为上面的两列。任务输出的 wire schema 依次为 `_cove_op`（`UPSERT` / `DELETE`）、`schema` 中的业务列（DELETE 行的非键列可以为空）、`_cove_version`、`_cove_sequence`。
-- `key_state` 输入包含受影响键在上一 release 的 `_cove_version`、`_cove_sequence` 和 `_cove_deleted`（包括已删除的键），用来阻止迟到的旧版本覆盖新状态或使已删除的记录复活。比已接受状态更旧的变化以 `PUBLICATION_STALE_CHANGE` 拒绝。
+- `change_metadata` 固定为上面的两列。任务输出的 wire schema 依次为 `_colvenna_op`（`UPSERT` / `DELETE`）、`schema` 中的业务列（DELETE 行的非键列可以为空）、`_colvenna_version`、`_colvenna_sequence`。
+- `key_state` 输入包含受影响键在上一 release 的 `_colvenna_version`、`_colvenna_sequence` 和 `_colvenna_deleted`（包括已删除的键），用来阻止迟到的旧版本覆盖新状态或使已删除的记录复活。比已接受状态更旧的变化以 `PUBLICATION_STALE_CHANGE` 拒绝。
 - 目标数据集注册时声明键状态：
 
   ```json
@@ -1299,9 +1299,9 @@ Python 输出的类型映射、增量任务的 `context.processing`、`merge_key
     "allow_empty": true,
     "schema": [
       {"name": "order_id", "type": "BIGINT", "nullable": false},
-      {"name": "_cove_version", "type": "BIGINT", "nullable": false},
-      {"name": "_cove_sequence", "type": "BIGINT", "nullable": false},
-      {"name": "_cove_deleted", "type": "BOOLEAN", "nullable": false}
+      {"name": "_colvenna_version", "type": "BIGINT", "nullable": false},
+      {"name": "_colvenna_sequence", "type": "BIGINT", "nullable": false},
+      {"name": "_colvenna_deleted", "type": "BOOLEAN", "nullable": false}
     ]
   }
   ```
@@ -1324,8 +1324,8 @@ Lambda 和 ECS 上的任务使用锁定依赖的运行环境。环境版本不�
 创建环境版本（需要 `runtime:manage`）：
 
 ```bash
-curl -s -X POST "$COVE_API_URL/v1/spaces/$COVE_SPACE/runtime-environments" \
-  -H "Authorization: Bearer $COVE_API_KEY" -H "Content-Type: application/json" \
+curl -s -X POST "$COLVENNA_API_URL/v1/spaces/$COLVENNA_SPACE/runtime-environments" \
+  -H "Authorization: Bearer $COLVENNA_API_KEY" -H "Content-Type: application/json" \
   -d '{"environment_id": "pandas-demo", "version": "v1", "python_version": "3.12",
        "platform": "linux_arm64", "build_profile": "binary_wheels",
        "dependency_source": {"format": "requirements", "content": "numpy==2.2.6\npandas==2.2.3\npyarrow==24.0.0\n"}}'
@@ -1336,16 +1336,16 @@ curl -s -X POST "$COVE_API_URL/v1/spaces/$COVE_SPACE/runtime-environments" \
 构建（需要 `runtime:manage` 和 `Idempotency-Key`）：
 
 ```bash
-curl -s -X POST "$COVE_API_URL/v1/spaces/$COVE_SPACE/runtime-environments/pandas-demo/versions/v1/build" \
-  -H "Authorization: Bearer $COVE_API_KEY" -H "Content-Type: application/json" \
+curl -s -X POST "$COLVENNA_API_URL/v1/spaces/$COLVENNA_SPACE/runtime-environments/pandas-demo/versions/v1/build" \
+  -H "Authorization: Bearer $COLVENNA_API_KEY" -H "Content-Type: application/json" \
   -H "Idempotency-Key: build-pandas-demo-v1" -d '{}'
 ```
 
 返回 `202`：`{"build_id": "<build_id>", "status": "QUEUED"}`。轮询版本状态（`runtime:manage` 或 `monitor:read`）：
 
 ```bash
-curl -s "$COVE_API_URL/v1/spaces/$COVE_SPACE/runtime-environments/pandas-demo/versions/v1" \
-  -H "Authorization: Bearer $COVE_API_KEY"
+curl -s "$COLVENNA_API_URL/v1/spaces/$COLVENNA_SPACE/runtime-environments/pandas-demo/versions/v1" \
+  -H "Authorization: Bearer $COLVENNA_API_KEY"
 ```
 
 | `status` | 含义 |
@@ -1396,8 +1396,8 @@ curl -s "$COVE_API_URL/v1/spaces/$COVE_SPACE/runtime-environments/pandas-demo/ve
 ```
 
 ```bash
-curl -s -X POST "$COVE_API_URL/v1/spaces/$COVE_SPACE/pipelines" \
-  -H "Authorization: Bearer $COVE_API_KEY" -H "Content-Type: application/json" -d @draft.json
+curl -s -X POST "$COLVENNA_API_URL/v1/spaces/$COLVENNA_SPACE/pipelines" \
+  -H "Authorization: Bearer $COLVENNA_API_KEY" -H "Content-Type: application/json" -d @draft.json
 ```
 
 返回 `201`：`{"pipeline_id": "orders", "revision": "rev_<…>", "status": "DRAFT"}`。新流水线的调度处于 `PAUSED`。同名流水线已存在时返回 `409 PIPELINE_ALREADY_EXISTS`。
@@ -1418,14 +1418,14 @@ curl -s -X POST "$COVE_API_URL/v1/spaces/$COVE_SPACE/pipelines" \
 **第 3 步：用实际的 `upload_id` 替换草稿。** 先读取当前 `revision`：
 
 ```bash
-curl -s "$COVE_API_URL/v1/spaces/$COVE_SPACE/pipelines/orders" -H "Authorization: Bearer $COVE_API_KEY"
+curl -s "$COLVENNA_API_URL/v1/spaces/$COLVENNA_SPACE/pipelines/orders" -H "Authorization: Bearer $COLVENNA_API_KEY"
 ```
 
 返回元数据：`pipeline_id`、`revision`、`draft_revision`、`status`（`ENABLED` / `PAUSED` / `ARCHIVED`）、`active_version`、`schedule_owner`、`schedule`、`definition` 和 `artifacts`。然后：
 
 ```bash
-curl -s -X PUT "$COVE_API_URL/v1/spaces/$COVE_SPACE/pipelines/orders/draft" \
-  -H "Authorization: Bearer $COVE_API_KEY" -H "Content-Type: application/json" \
+curl -s -X PUT "$COLVENNA_API_URL/v1/spaces/$COLVENNA_SPACE/pipelines/orders/draft" \
+  -H "Authorization: Bearer $COLVENNA_API_KEY" -H "Content-Type: application/json" \
   -H 'If-Match: "rev_<…>"' -d @draft-with-upload-ids.json
 ```
 
@@ -1434,8 +1434,8 @@ curl -s -X PUT "$COVE_API_URL/v1/spaces/$COVE_SPACE/pipelines/orders/draft" \
 **第 4 步：校验。**
 
 ```bash
-curl -s -X POST "$COVE_API_URL/v1/spaces/$COVE_SPACE/pipelines/orders/validate" \
-  -H "Authorization: Bearer $COVE_API_KEY" -H "Content-Type: application/json" \
+curl -s -X POST "$COLVENNA_API_URL/v1/spaces/$COLVENNA_SPACE/pipelines/orders/validate" \
+  -H "Authorization: Bearer $COLVENNA_API_KEY" -H "Content-Type: application/json" \
   -d '{"draft_revision": "rev_<…>"}'
 ```
 
@@ -1450,8 +1450,8 @@ curl -s -X POST "$COVE_API_URL/v1/spaces/$COVE_SPACE/pipelines/orders/validate" 
 **第 5 步：发布版本**（需要 `Idempotency-Key`）：
 
 ```bash
-curl -s -X POST "$COVE_API_URL/v1/spaces/$COVE_SPACE/pipelines/orders/versions" \
-  -H "Authorization: Bearer $COVE_API_KEY" -H "Content-Type: application/json" \
+curl -s -X POST "$COLVENNA_API_URL/v1/spaces/$COLVENNA_SPACE/pipelines/orders/versions" \
+  -H "Authorization: Bearer $COLVENNA_API_KEY" -H "Content-Type: application/json" \
   -H "Idempotency-Key: orders-publish-001" -d '{"draft_revision": "rev_<…>"}'
 ```
 
@@ -1460,8 +1460,8 @@ curl -s -X POST "$COVE_API_URL/v1/spaces/$COVE_SPACE/pipelines/orders/versions" 
 **第 6 步：激活。** 重新读取 `revision`，然后：
 
 ```bash
-curl -s -X POST "$COVE_API_URL/v1/spaces/$COVE_SPACE/pipelines/orders/activate" \
-  -H "Authorization: Bearer $COVE_API_KEY" -H "Content-Type: application/json" \
+curl -s -X POST "$COLVENNA_API_URL/v1/spaces/$COLVENNA_SPACE/pipelines/orders/activate" \
+  -H "Authorization: Bearer $COLVENNA_API_KEY" -H "Content-Type: application/json" \
   -H 'If-Match: "rev_<…>"' -d '{"pipeline_version": "<pipeline_version>"}'
 ```
 
@@ -1470,7 +1470,7 @@ curl -s -X POST "$COVE_API_URL/v1/spaces/$COVE_SPACE/pipelines/orders/activate" 
 代码包规则：
 
 - 单个文件最多 10 MiB，整个包最多 50 MiB，最多 128 个文件；每个任务的 `entrypoint` 必须在 `artifacts` 中。
-- 路径为相对路径，不能包含 `..` 或反斜杠；`.cove/` 是保留路径。
+- 路径为相对路径，不能包含 `..` 或反斜杠；`.colvenna/` 是保留路径。
 - 发布时 Python 文件只做语法编译检查，不会执行；SQL 文件必须是非空文本。如果代码包里包含 YAML 定义文件，它必须与草稿定义一致（`422 YAML_DEFINITION_MISMATCH`）。
 - 已上传的代码字节计入空间配额 `max_stored_code_bytes`（缺省 512 MiB），超出返回 `429 SPACE_ARTIFACT_QUOTA`。
 - 读取草稿中某个文件：`GET .../pipelines/orders/draft/artifacts?path=<相对路径>`，768 KiB 以内的 UTF-8 文本返回原文，其他文件只返回 hash 和大小。
@@ -1484,23 +1484,23 @@ curl -s -X POST "$COVE_API_URL/v1/spaces/$COVE_SPACE/pipelines/orders/activate" 
 
 | `owner` | 含义 |
 | --- | --- |
-| `cove` | 由 Colvenna Isle 按 `expression` 和 `timezone` 自动创建运行 |
+| `colvenna` | 由 Colvenna Isle 按 `expression` 和 `timezone` 自动创建运行 |
 | `external` | 由外部编排（如 Airflow）调用运行 API；Colvenna Isle 不自动创建运行 |
 | `none` | 只允许手动运行 |
 
 修改调度（需要 `pipeline:manage` 和 `If-Match`）：
 
 ```bash
-curl -s -X PUT "$COVE_API_URL/v1/spaces/$COVE_SPACE/pipelines/orders/schedule" \
-  -H "Authorization: Bearer $COVE_API_KEY" -H "Content-Type: application/json" \
+curl -s -X PUT "$COLVENNA_API_URL/v1/spaces/$COLVENNA_SPACE/pipelines/orders/schedule" \
+  -H "Authorization: Bearer $COLVENNA_API_KEY" -H "Content-Type: application/json" \
   -H 'If-Match: "rev_<…>"' \
-  -d '{"owner": "cove", "state": "ENABLED", "expression": "rate(5 minutes)", "timezone": "UTC"}'
+  -d '{"owner": "colvenna", "state": "ENABLED", "expression": "rate(5 minutes)", "timezone": "UTC"}'
 ```
 
 - `state` 为 `ENABLED` 或 `PAUSED`。`ENABLED` 要求流水线已有激活版本（`409 PIPELINE_ACTIVE_VERSION_REQUIRED`）。
-- `owner: cove` 必须提供 `expression` 和 `timezone`（IANA 时区名）。
+- `owner: colvenna` 必须提供 `expression` 和 `timezone`（IANA 时区名）。
 - `expression` 支持 `rate(<n> <unit>)`，单位为 `minute(s)`、`hour(s)`、`day(s)`（数量为 1 时用单数）；以及六个字段的 `cron(分 时 日 月 星期 年)`，“日”和“星期”两个字段中恰好有一个是 `?`。最小粒度为 1 分钟。
-- 以 `owner: cove` 启用调度时，调用的 Key 还必须持有 `pipeline:run`（`403 SCHEDULE_RUN_SCOPE_REQUIRED`）；定时运行以这个 Key 的身份创建。
+- 以 `owner: colvenna` 启用调度时，调用的 Key 还必须持有 `pipeline:run`（`403 SCHEDULE_RUN_SCOPE_REQUIRED`）；定时运行以这个 Key 的身份创建。
 
 定时行为：
 
@@ -1514,8 +1514,8 @@ curl -s -X PUT "$COVE_API_URL/v1/spaces/$COVE_SPACE/pipelines/orders/schedule" \
 手动运行需要 `pipeline:run` 和 `Idempotency-Key`：
 
 ```bash
-curl -s -X POST "$COVE_API_URL/v1/spaces/$COVE_SPACE/pipelines/orders/runs" \
-  -H "Authorization: Bearer $COVE_API_KEY" -H "Content-Type: application/json" \
+curl -s -X POST "$COLVENNA_API_URL/v1/spaces/$COLVENNA_SPACE/pipelines/orders/runs" \
+  -H "Authorization: Bearer $COLVENNA_API_KEY" -H "Content-Type: application/json" \
   -H "Idempotency-Key: orders-run-2026-10-15" \
   -d '{"pipeline_version": "<pipeline_version>", "mode": "snapshot", "parameters": {"high_value_threshold": "500.00"}}'
 ```
@@ -1542,8 +1542,8 @@ curl -s -X POST "$COVE_API_URL/v1/spaces/$COVE_SPACE/pipelines/orders/runs" \
 读取运行状态：运行的发起者（`pipeline:run`），或持有 `monitor:read` 的 Key：
 
 ```bash
-curl -s "$COVE_API_URL/v1/spaces/$COVE_SPACE/pipelines/orders/runs/<run_id>" \
-  -H "Authorization: Bearer $COVE_API_KEY"
+curl -s "$COLVENNA_API_URL/v1/spaces/$COLVENNA_SPACE/pipelines/orders/runs/<run_id>" \
+  -H "Authorization: Bearer $COLVENNA_API_KEY"
 ```
 
 ```json
@@ -1591,8 +1591,8 @@ curl -s "$COVE_API_URL/v1/spaces/$COVE_SPACE/pipelines/orders/runs/<run_id>" \
 取消（需要 `pipeline:run`；取消他人的运行还需要 `monitor:read` 或 `pipeline:manage`）：
 
 ```bash
-curl -s -X POST "$COVE_API_URL/v1/spaces/$COVE_SPACE/pipelines/orders/runs/<run_id>/cancel" \
-  -H "Authorization: Bearer $COVE_API_KEY" -H "Content-Type: application/json" -d '{}'
+curl -s -X POST "$COLVENNA_API_URL/v1/spaces/$COLVENNA_SPACE/pipelines/orders/runs/<run_id>/cancel" \
+  -H "Authorization: Bearer $COLVENNA_API_KEY" -H "Content-Type: application/json" -d '{}'
 ```
 
 - 返回 `{"run_id", "status"}`。取消阻止尚未发布的任务继续计算、导入和发布。
@@ -1601,8 +1601,8 @@ curl -s -X POST "$COVE_API_URL/v1/spaces/$COVE_SPACE/pipelines/orders/runs/<run_
 重试（需要 `pipeline:run` 和 `Idempotency-Key`）：
 
 ```bash
-curl -s -X POST "$COVE_API_URL/v1/spaces/$COVE_SPACE/pipelines/orders/runs/<run_id>/retry" \
-  -H "Authorization: Bearer $COVE_API_KEY" -H "Content-Type: application/json" \
+curl -s -X POST "$COLVENNA_API_URL/v1/spaces/$COLVENNA_SPACE/pipelines/orders/runs/<run_id>/retry" \
+  -H "Authorization: Bearer $COLVENNA_API_KEY" -H "Content-Type: application/json" \
   -H "Idempotency-Key: orders-run-2026-10-15-retry-1" -d '{}'
 ```
 
@@ -1615,8 +1615,8 @@ curl -s -X POST "$COVE_API_URL/v1/spaces/$COVE_SPACE/pipelines/orders/runs/<run_
 试运行只执行一个任务，读取输入的前若干行，按正式发布的规则校验输出，但**永远不发布**，不推进水位、不改变 release。需要 `pipeline:run` 和 `Idempotency-Key`：
 
 ```bash
-curl -s -X POST "$COVE_API_URL/v1/spaces/$COVE_SPACE/pipelines/orders/trial-runs" \
-  -H "Authorization: Bearer $COVE_API_KEY" -H "Content-Type: application/json" \
+curl -s -X POST "$COLVENNA_API_URL/v1/spaces/$COLVENNA_SPACE/pipelines/orders/trial-runs" \
+  -H "Authorization: Bearer $COLVENNA_API_KEY" -H "Content-Type: application/json" \
   -H "Idempotency-Key: orders-trial-score-001" \
   -d '{"pipeline_version": "<pipeline_version>", "task_id": "score_orders", "sample_rows": 100}'
 ```
@@ -1629,10 +1629,10 @@ curl -s -X POST "$COVE_API_URL/v1/spaces/$COVE_SPACE/pipelines/orders/trial-runs
 
 ### 8.14 Airflow
 
-Airflow 是可选的外部编排方，负责跨系统依赖；流水线内部的 DAG、固定输入、计算和发布仍由 Colvenna Isle 完成。示例 operator 见 [cove_operator.py](../examples/airflow/cove_operator.py)，示例 DAG 见 [cove_orders.py](../examples/airflow/dags/cove_orders.py)：
+Airflow 是可选的外部编排方，负责跨系统依赖；流水线内部的 DAG、固定输入、计算和发布仍由 Colvenna Isle 完成。示例 operator 见 [colvenna_operator.py](../examples/airflow/colvenna_operator.py)，示例 DAG 见 [colvenna_orders.py](../examples/airflow/dags/colvenna_orders.py)：
 
 1. 把流水线的调度方设为 `owner: external`，避免 Colvenna Isle 与 Airflow 同时自动触发。
-2. 为 Airflow 签发只含 `pipeline:run` 的专用 Key，存入 Airflow Variable `cove_pipeline_token`；API 地址存入 `cove_api_url`。
+2. 为 Airflow 签发只含 `pipeline:run` 的专用 Key，存入 Airflow Variable `colvenna_pipeline_token`；API 地址存入 `colvenna_api_url`。
 3. operator 提交固定的 `pipeline_version`。`Idempotency-Key` 由 DAG ID、Airflow `run_id` 和 task ID 派生，**不含** try number，因此 Airflow 重试、worker 重启或断线重连都对应同一个 Colvenna Isle 运行。
 4. operator 轮询运行状态：只有 `PUBLISHED` 才成功，并通过 XCom 返回每个任务的 release；`FAILED` 或 `CANCELLED` 使 Airflow 任务失败，下游不放行。
 5. Airflow 等待超时只结束本次 Airflow 尝试，不会取消 Colvenna Isle 运行。需要取消时显式调用取消接口。
@@ -1774,8 +1774,8 @@ Admin Console 是空间的管理界面，地址为 `<WebUrl>/admin.html`。连�
 `GET /v1/admin/spaces/{space_id}/retention` 读取策略（`retention:manage` 或 `monitor:read`），`PUT` 修改（`retention:manage`，`If-Match` 为 `revision`）：
 
 ```bash
-curl -s -X PUT "$COVE_API_URL/v1/admin/spaces/$COVE_SPACE/retention" \
-  -H "Authorization: Bearer $COVE_API_KEY" -H "Content-Type: application/json" \
+curl -s -X PUT "$COLVENNA_API_URL/v1/admin/spaces/$COLVENNA_SPACE/retention" \
+  -H "Authorization: Bearer $COLVENNA_API_KEY" -H "Content-Type: application/json" \
   -H 'If-Match: "ret_<n>"' \
   -d '{"state": "ENABLED", "policy": {"release_keep": 5, "staging_seconds": 259200}}'
 ```
@@ -1799,8 +1799,8 @@ curl -s -X PUT "$COVE_API_URL/v1/admin/spaces/$COVE_SPACE/retention" \
 保留锁定（`retention:manage`）用于回填、审计和备份期间保护对象：
 
 ```bash
-curl -s -X POST "$COVE_API_URL/v1/admin/spaces/$COVE_SPACE/retention/holds" \
-  -H "Authorization: Bearer $COVE_API_KEY" -H "Content-Type: application/json" \
+curl -s -X POST "$COLVENNA_API_URL/v1/admin/spaces/$COLVENNA_SPACE/retention/holds" \
+  -H "Authorization: Bearer $COLVENNA_API_KEY" -H "Content-Type: application/json" \
   -d '{"target": {"kind": "release", "id": "<release_id>", "dataset": "ads.dashboard"},
        "reason": "Q4 audit", "expires_at": "2027-01-31T00:00:00Z"}'
 ```

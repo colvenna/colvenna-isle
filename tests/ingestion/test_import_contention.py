@@ -12,12 +12,12 @@ from types import SimpleNamespace
 
 import duckdb
 
-from cove_duckdb.control.registry import ControlError
-from cove_duckdb.writer.ingestion import IngestionStore, digest
-from cove_duckdb.writer.qualification_import import QualificationImports
-from cove_duckdb.writer.scheduler import Scheduler
-from cove_duckdb.writer.write_qualification import WriteQualification
-from cove_duckdb.writer.writes import WriteStore, write_id
+from colvenna_isle.control.registry import ControlError
+from colvenna_isle.writer.ingestion import IngestionStore, digest
+from colvenna_isle.writer.qualification_import import QualificationImports
+from colvenna_isle.writer.scheduler import Scheduler
+from colvenna_isle.writer.write_qualification import WriteQualification
+from colvenna_isle.writer.writes import WriteStore, write_id
 from test_transactions import REGISTERED as INGESTION_REGISTERED
 from test_transactions import message, payload
 from test_writes import REGISTERED, request
@@ -135,7 +135,7 @@ class NativeImportContention(unittest.TestCase):
         self.assertEqual(self.wait_job(), "UNKNOWN")
         self.assertEqual(self.connection.execute(
             "SELECT count(*) FROM duckdb_tables() WHERE database_name='warehouse' AND "
-            "table_name LIKE '_cove_import_%'").fetchone()[0], 0)
+            "table_name LIKE '_colvenna_import_%'").fetchone()[0], 0)
         self.assertEqual(self.imports.execute({**changed, "phase": "status"})["state"], "UNKNOWN")
 
     def test_nonadmitted_generation_and_outside_staging_key_are_denied(self):

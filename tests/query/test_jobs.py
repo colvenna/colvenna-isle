@@ -17,9 +17,9 @@ from pathlib import Path
 
 from botocore.exceptions import ClientError, ReadTimeoutError
 
-from cove_duckdb.control.registry import ControlError, Principal
-from cove_duckdb.query.jobs import Jobs, SPACE_PENDING
-from cove_duckdb.query.process import run
+from colvenna_isle.control.registry import ControlError, Principal
+from colvenna_isle.query.jobs import Jobs, SPACE_PENDING
+from colvenna_isle.query.process import run
 
 SOURCE, IMAGE = "a" * 40, "sha256:" + "b" * 64
 EXECUTOR = {"source_commit": SOURCE, "image_digest": IMAGE,

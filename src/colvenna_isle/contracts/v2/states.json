@@ -1,0 +1,138 @@
+{
+  "contract_version": 2,
+  "terminal_rule": "PUBLISHED/SUCCEEDED/CANCELLED remain terminal; retries use new attempts and fixed bindings",
+  "transitions": {
+    "environment": {
+      "BUILDING": [
+        "VERIFYING",
+        "FAILED"
+      ],
+      "DRAFT": [
+        "RESOLVING",
+        "FAILED"
+      ],
+      "FAILED": [],
+      "READY": [],
+      "RESOLVING": [
+        "BUILDING",
+        "FAILED"
+      ],
+      "VERIFYING": [
+        "READY",
+        "FAILED"
+      ]
+    },
+    "ingestion": {
+      "ACCEPTED": [
+        "COMMITTED",
+        "FAILED"
+      ],
+      "COMMITTED": [
+        "PUBLISHED"
+      ],
+      "FAILED": [
+        "COMMITTED"
+      ],
+      "PUBLISHED": []
+    },
+    "query": {
+      "CANCELLED": [],
+      "CANCELLING": [
+        "CANCELLED"
+      ],
+      "FAILED": [],
+      "QUEUED": [
+        "RUNNING",
+        "FAILED",
+        "CANCELLING",
+        "CANCELLED"
+      ],
+      "RUNNING": [
+        "SUCCEEDED",
+        "FAILED",
+        "CANCELLING"
+      ],
+      "SUCCEEDED": []
+    },
+    "run": {
+      "CANCELLED": [],
+      "CANCELLING": [
+        "CANCELLED",
+        "PUBLISHED"
+      ],
+      "FAILED": [
+        "QUEUED"
+      ],
+      "PUBLISHED": [],
+      "QUEUED": [
+        "RUNNING",
+        "FAILED",
+        "CANCELLING"
+      ],
+      "RUNNING": [
+        "PUBLISHED",
+        "VALIDATED",
+        "FAILED",
+        "CANCELLING"
+      ],
+      "VALIDATED": []
+    },
+    "task": {
+      "BLOCKED": [
+        "READY",
+        "FAILED",
+        "CANCELLING"
+      ],
+      "CANCELLED": [],
+      "CANCELLING": [
+        "CANCELLED",
+        "PUBLISHED"
+      ],
+      "DISPATCHING": [
+        "RUNNING",
+        "RETRY_WAIT",
+        "FAILED",
+        "CANCELLING"
+      ],
+      "FAILED": [
+        "RETRY_WAIT"
+      ],
+      "IMPORTING": [
+        "PUBLISHED",
+        "FAILED",
+        "CANCELLING"
+      ],
+      "PUBLISHED": [],
+      "READY": [
+        "DISPATCHING",
+        "FAILED",
+        "CANCELLING"
+      ],
+      "RETRY_WAIT": [
+        "READY",
+        "FAILED",
+        "CANCELLING"
+      ],
+      "RUNNING": [
+        "STAGED",
+        "VALIDATING",
+        "RETRY_WAIT",
+        "FAILED",
+        "CANCELLING"
+      ],
+      "STAGED": [
+        "VALIDATING",
+        "VALIDATED",
+        "FAILED",
+        "CANCELLING"
+      ],
+      "VALIDATED": [],
+      "VALIDATING": [
+        "IMPORTING",
+        "FAILED",
+        "CANCELLING"
+      ]
+    }
+  },
+  "unknown_rule": "Observation only; authoritative reconciliation required before leaving UNKNOWN"
+}

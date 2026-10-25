@@ -22,7 +22,7 @@ ARROW_SCHEMA = pa.schema(
 
 def run(context_path: Path, output_dir: Path) -> None:
     context = json.loads(context_path.read_text(encoding="utf-8"))
-    if context["contract_version"] != 1 or context["input_mode"] != "local_files":
+    if context["contract_version"] != 2 or context["input_mode"] != "local_files":
         raise ValueError("This example requires contract v1 with local_files inputs")
     if output_dir.resolve() != Path(context["output"]["directory"]).resolve():
         raise ValueError("Output directory must match the runner's context")
@@ -63,7 +63,7 @@ def run(context_path: Path, output_dir: Path) -> None:
     with output_file.open("rb") as stream:
         digest = hashlib.file_digest(stream, "sha256").hexdigest()
     manifest = {
-        "contract_version": 1,
+        "contract_version": 2,
         "job_id": context["job_id"],
         "attempt_id": context["attempt_id"],
         "execution_id": context["execution_id"],

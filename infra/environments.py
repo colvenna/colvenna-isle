@@ -4,7 +4,7 @@
 REGION = "${AWS::Region}"
 
 
-from cove_duckdb.region import regional
+from colvenna_isle.region import regional
 
 def template(baseline, source, policy, project, *, account):
     bucket, repository, prefix = baseline["DataBucket"], policy["repository"], policy["runtime_prefix"]
@@ -100,7 +100,7 @@ def template(baseline, source, policy, project, *, account):
             "State": "ENABLED", "EventPattern": {
                 "source": ["aws.ecs"], "detail-type": ["ECS Task State Change"],
                 "detail": {"clusterArn": [cluster_arn], "lastStatus": ["STOPPED"],
-                           "startedBy": [{"prefix": "cove-"}]}},
+                           "startedBy": [{"prefix": "colvenna-"}]}},
             "Targets": [{"Id": "pipeline-events", "Arn": {"Fn::GetAtt": ["PipelineEvents", "Arn"]}}]}},
         "RuntimeBoundary": {"Type": "AWS::IAM::ManagedPolicy", "Properties": {
             "Description": "Colvenna Isle user execution: generation inputs/staging and runtime logs only",
@@ -134,8 +134,8 @@ def template(baseline, source, policy, project, *, account):
             "Environment": {"Type": "ARM_CONTAINER", "ComputeType": "BUILD_GENERAL1_SMALL",
                             "Image": policy["builder_image"], "ImagePullCredentialsType": "CODEBUILD",
                             "PrivilegedMode": True,
-                            "EnvironmentVariables": [{"Name": "COVE_ACCOUNT", "Value": account, "Type": "PLAINTEXT"},
-                                {"Name": "COVE_REGION", "Value": {"Ref": "AWS::Region"}, "Type": "PLAINTEXT"},
+                            "EnvironmentVariables": [{"Name": "COLVENNA_ACCOUNT", "Value": account, "Type": "PLAINTEXT"},
+                                {"Name": "COLVENNA_REGION", "Value": {"Ref": "AWS::Region"}, "Type": "PLAINTEXT"},
                                 {"Name": "AWS_DEFAULT_REGION", "Value": {"Ref": "AWS::Region"}, "Type": "PLAINTEXT"}]},
             "LogsConfig": {"CloudWatchLogs": {"Status": "ENABLED", "GroupName": {"Ref": "BuildLogs"}}},
         }},

@@ -33,9 +33,9 @@ class DeploymentTests(unittest.TestCase):
         for invalid in ["env", "core", "control", "builder", "UATB", "a", "uat-2", "x" * 13]:
             with self.assertRaises(RuntimeError):
                 names.names(invalid)
-        with patch.dict(os.environ, {"COVE_ENVIRONMENT": "uatb"}):
+        with patch.dict(os.environ, {"COLVENNA_ENVIRONMENT": "uatb"}):
             self.assertEqual(names.names(), isolated)
-        with patch.dict(os.environ, {"COVE_ENVIRONMENT": ""}), self.assertRaises(RuntimeError):
+        with patch.dict(os.environ, {"COLVENNA_ENVIRONMENT": ""}), self.assertRaises(RuntimeError):
             names.names()
         policy = json.loads((ROOT / "runtime/environment-lock.json").read_text())
         policy.update(source_commit="2" * 40, repository="owned-repository", runtime_prefix=isolated["runtime_prefix"])
@@ -83,14 +83,14 @@ class DeploymentTests(unittest.TestCase):
         definition = module("control").template(
             self.baseline(), "auth", {"key": "code.zip", "version_id": "original"}, "2" * 40, account=ACCOUNT)
         variables = definition["Resources"]["Control"]["Properties"]["Environment"]["Variables"]
-        self.assertEqual(variables["COVE_SOURCE_COMMIT"], "2" * 40)
-        self.assertEqual(variables["COVE_WRITER_SOURCE_COMMIT"], "1" * 40)
+        self.assertEqual(variables["COLVENNA_SOURCE_COMMIT"], "2" * 40)
+        self.assertEqual(variables["COLVENNA_WRITER_SOURCE_COMMIT"], "1" * 40)
 
-        from cove_duckdb.control import handler
-        environment = {**variables, "COVE_REGION": "us-west-2",
-                       "COVE_ENVIRONMENT_PROJECT": "", "COVE_ENVIRONMENT_POLICY": "{}"}
+        from colvenna_isle.control import handler
+        environment = {**variables, "COLVENNA_REGION": "us-west-2",
+                       "COLVENNA_ENVIRONMENT_PROJECT": "", "COLVENNA_ENVIRONMENT_POLICY": "{}"}
         with patch.dict(os.environ, environment), patch.object(handler, "clients", return_value=(Mock(), Mock(), Mock())):
-            with patch("cove_duckdb.control.status.Ledger") as ledger, patch.object(handler, "handle"):
+            with patch("colvenna_isle.control.status.Ledger") as ledger, patch.object(handler, "handle"):
                 handler.handler({}, None)
             self.assertEqual(ledger.call_args.args[-1], "1" * 40)
 
@@ -167,7 +167,7 @@ class DeploymentTests(unittest.TestCase):
                                           pipelines={"state": "ENABLED"}, account=ACCOUNT)
 
     def test_every_contract_route_has_a_gateway_route_and_admin_routes_use_the_authorizer(self):
-        from cove_duckdb.contracts.model import ROUTES
+        from colvenna_isle.contracts.model import ROUTES
 
         definition = self.governed()
         routes = {value["Properties"]["RouteKey"]: value["Properties"] for value in definition["Resources"].values()
@@ -198,14 +198,14 @@ class DeploymentTests(unittest.TestCase):
         self.assertEqual(deny["Resource"], "arn:aws:s3:::owned-bucket/spaces/*/gen_*/warehouse/*")
         self.assertEqual(resources["Collector"]["Properties"]["ReservedConcurrentExecutions"], 1)
         control = resources["Control"]["Properties"]["Environment"]["Variables"]
-        self.assertEqual(control["COVE_COLLECTOR_FUNCTION"], {"Ref": "Collector"})
+        self.assertEqual(control["COLVENNA_COLLECTOR_FUNCTION"], {"Ref": "Collector"})
         governance = resources["GovernancePolicy"]["Properties"]["PolicyDocument"]["Statement"]
         self.assertFalse(any(action.startswith("s3:Delete") for statement in governance
                              for action in statement["Action"]))
 
     def test_scheduler_can_write_the_audit_record_of_the_runs_it_admits(self):
         from fnmatch import fnmatch
-        from cove_duckdb.control.audit import partition
+        from colvenna_isle.control.audit import partition
 
         statements = self.governed()["Resources"]["SchedulerRole"]["Properties"]["Policies"][0]["PolicyDocument"]["Statement"]
         writable = [key for statement in statements if "dynamodb:PutItem" in statement.get("Action", [])

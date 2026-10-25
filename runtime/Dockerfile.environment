@@ -1,15 +1,15 @@
 ARG BASE_IMAGE
 FROM ${BASE_IMAGE}
 USER root
-COPY wheels/ /opt/cove/wheels/
-COPY requirements.lock /opt/cove/requirements.lock
-RUN python -m pip install --no-index --find-links=/opt/cove/wheels \
+COPY wheels/ /opt/colvenna/wheels/
+COPY requirements.lock /opt/colvenna/requirements.lock
+RUN python -m pip install --no-index --find-links=/opt/colvenna/wheels \
       --require-hashes --only-binary=:all: --no-compile --no-cache-dir \
-      --target /opt/cove/site -r /opt/cove/requirements.lock \
-    && rm -rf /opt/cove/wheels
-COPY application/ /opt/cove/application/
-COPY environment.json /opt/cove/environment.json
-COPY LICENSE /opt/cove/LICENSE
-ENV PYTHONPATH=/opt/cove/application:/opt/cove/site PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+      --target /opt/colvenna/site -r /opt/colvenna/requirements.lock \
+    && rm -rf /opt/colvenna/wheels
+COPY application/ /opt/colvenna/application/
+COPY environment.json /opt/colvenna/environment.json
+COPY LICENSE /opt/colvenna/LICENSE
+ENV PYTHONPATH=/opt/colvenna/application:/opt/colvenna/site PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 USER 10001:10001
 WORKDIR /tmp

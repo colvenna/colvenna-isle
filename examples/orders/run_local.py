@@ -16,7 +16,7 @@ import pyarrow.parquet as pq
 
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT.parents[1] / "src"))
-from cove_duckdb.contracts.validation import load_document, validate
+from colvenna_isle.contracts.validation import load_document, validate
 
 
 def sha256(path):
@@ -116,8 +116,8 @@ def check_definition(definition):
 def fixture():
     schema = pa.schema([
         ("order_id", pa.int64()), ("source_version", pa.int64()),
-        ("_cove_commit_sequence", pa.int64()), ("event_time", pa.timestamp("us")),
-        ("amount", pa.decimal128(18, 2)), ("_cove_operation", pa.string()),
+        ("_colvenna_commit_sequence", pa.int64()), ("event_time", pa.timestamp("us")),
+        ("amount", pa.decimal128(18, 2)), ("_colvenna_operation", pa.string()),
     ])
     values = [
         (1, 1, "2026-10-14", "10.00", "upsert"),
@@ -129,8 +129,8 @@ def fixture():
         (5, 1, "2026-10-15", "50.00", "upsert"),
     ]
     rows = [
-        dict(order_id=key, source_version=version, _cove_commit_sequence=sequence,
-             event_time=datetime.fromisoformat(day), amount=Decimal(amount), _cove_operation=operation)
+        dict(order_id=key, source_version=version, _colvenna_commit_sequence=sequence,
+             event_time=datetime.fromisoformat(day), amount=Decimal(amount), _colvenna_operation=operation)
         for sequence, (key, version, day, amount, operation) in enumerate(values, start=1)
     ]
     return pa.Table.from_pylist(rows, schema=schema)
@@ -162,7 +162,7 @@ def run_dag(definition, directory, source):
             for alias, path in inputs.items():
                 source_task = task["inputs"][alias]["task"]
                 descriptor = {
-                    "contract_version": 1,
+                    "contract_version": 2,
                     "dataset": declared_tasks[source_task]["output"]["dataset"],
                     "release_id": f"local_{source_task}_v1",
                     "watermark": {"ods_sequence": source.num_rows},
@@ -185,7 +185,7 @@ def run_dag(definition, directory, source):
                     files=[{**file, "local_path": str(path)} for file in descriptor["files"]],
                 )
             context = {
-                "contract_version": 1, "space_id": "local_demo", "pipeline_id": "orders",
+                "contract_version": 2, "space_id": "local_demo", "pipeline_id": "orders",
                 "pipeline_version": "local_v1", "run_id": directory.name, "task_id": task_id,
                 "job_id": f"job_{task_id}", "attempt_id": "attempt_1", "execution_id": "exec_1",
                 "input_mode": "local_files",
@@ -232,8 +232,8 @@ def run_dag(definition, directory, source):
 def check_incremental_cleaning():
     """Exercise delta SQL and a local state model; not the cloud merge publisher."""
     state_schema = pa.schema([
-        ("order_id", pa.int64()), ("_cove_version", pa.int64()),
-        ("_cove_sequence", pa.int64()), ("_cove_deleted", pa.bool_()),
+        ("order_id", pa.int64()), ("_colvenna_version", pa.int64()),
+        ("_colvenna_sequence", pa.int64()), ("_colvenna_deleted", pa.bool_()),
     ])
     batches = [
         [(1, 2, "12.34", "upsert"), (2, 1, "600.00", "upsert")],
@@ -251,24 +251,24 @@ def check_incremental_cleaning():
             rows = []
             for key, version, amount, operation in batch:
                 row = dict(order_id=key, source_version=version,
-                           _cove_commit_sequence=len(history) + 1,
+                           _colvenna_commit_sequence=len(history) + 1,
                            event_time=datetime(2026, 10, 14),
                            amount=Decimal(amount) if amount is not None else None,
-                           _cove_operation=operation)
+                           _colvenna_operation=operation)
                 rows.append(row)
                 history.append(row)
             connection.register("changes", pa.Table.from_pylist(rows, schema=fixture().schema))
             connection.register("key_state", pa.Table.from_pylist(list(key_state.values()), schema=state_schema))
             mutations = connection.sql(query).to_arrow_table().to_pylist()
-            actual = {row["order_id"]: row["_cove_op"] for row in mutations}
+            actual = {row["order_id"]: row["_colvenna_op"] for row in mutations}
             if actual != expected:
                 raise AssertionError(f"Incorrect incremental mutations: {actual}")
             for row in mutations:
                 key = row["order_id"]
-                key_state[key] = dict(order_id=key, _cove_version=row["_cove_version"],
-                                      _cove_sequence=row["_cove_sequence"],
-                                      _cove_deleted=row["_cove_op"] == "DELETE")
-                if row["_cove_op"] == "DELETE":
+                key_state[key] = dict(order_id=key, _colvenna_version=row["_colvenna_version"],
+                                      _colvenna_sequence=row["_colvenna_sequence"],
+                                      _colvenna_deleted=row["_colvenna_op"] == "DELETE")
+                if row["_colvenna_op"] == "DELETE":
                     if row["amount"] is not None or row["order_date"] is not None:
                         raise AssertionError("Delete rows should not require business payload")
                     current.pop(key, None)
@@ -283,7 +283,7 @@ def check_incremental_cleaning():
 def main():
     definition = load_document(ROOT / "pipeline.yaml")
     check_definition(definition)
-    with tempfile.TemporaryDirectory(prefix="cove-orders-contract-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="colvenna-orders-contract-") as temporary:
         work = Path(temporary)
         populated = work / "populated"
         populated.mkdir()

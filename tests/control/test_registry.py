@@ -4,8 +4,8 @@ import copy
 import json
 import unittest
 
-from cove_duckdb.contracts.validation import ContractError, validate
-from cove_duckdb.control.handler import handle, parse_body
+from colvenna_isle.contracts.validation import ContractError, validate
+from colvenna_isle.control.handler import handle, parse_body
 
 
 def definition(dataset="ods.orders"):
@@ -49,7 +49,7 @@ class RegistryContractTests(unittest.TestCase):
             lambda d: d["schema"][1].update(type="INTEGER"),
             lambda d: d["schema"].append(copy.deepcopy(d["schema"][0])),
             lambda d: d["schema"].append({"name": "ORDER_ID", "type": "BIGINT", "nullable": False}),
-            lambda d: d["schema"].append({"name": "_CoVe_operation", "type": "VARCHAR", "nullable": True}),
+            lambda d: d["schema"].append({"name": "_CoLvEnNa_operation", "type": "VARCHAR", "nullable": True}),
             lambda d: d.update(dataset="ods.Orders"),
             lambda d: d.update(key_columns=["missing"]),
             lambda d: d["schema"][0].update(nullable=True),
@@ -66,7 +66,7 @@ class RegistryContractTests(unittest.TestCase):
     def test_caller_cannot_supply_identity_in_headers_or_body(self):
         request = event()
         del request["requestContext"]["authorizer"]
-        request["headers"]["x-cove-principal"] = "administrator"
+        request["headers"]["x-colvenna-principal"] = "administrator"
         request["body"] = json.dumps({"principal_id": "administrator", "scopes": ["datasets:manage"]})
         self.assertEqual(handle(request, NoStorage())["statusCode"], 403)
 
@@ -101,7 +101,7 @@ if __name__ == "__main__":
 class RestoreRegistryTests(unittest.TestCase):
     def test_restore_keeps_space_generation_and_datasets_and_rebinds_only_the_bucket(self):
         from botocore.exceptions import ClientError
-        from cove_duckdb.control.registry import Registry
+        from colvenna_isle.control.registry import Registry
 
         class Table:
             def __init__(self):

@@ -106,8 +106,8 @@ def main():
         print(json.dumps({"step": name, "result": value}, default=str), flush=True)
 
     # The child tools re-check the caller against the same explicit account.
-    environment = {"PATH": "/usr/bin:/bin", "AWS_REGION": REGION, "COVE_ENVIRONMENT": STACKS["environment"],
-                   "COVE_ACCOUNT": ACCOUNT, "HOME": str(Path.home())}
+    environment = {"PATH": "/usr/bin:/bin", "AWS_REGION": REGION, "COLVENNA_ENVIRONMENT": STACKS["environment"],
+                   "COLVENNA_ACCOUNT": ACCOUNT, "HOME": str(Path.home())}
     try:
         cf.describe_stacks(StackName=STACKS["baseline"])
         closed = subprocess.run([sys.executable, str(ROOT / "scripts/aws/admission.py"), "close",

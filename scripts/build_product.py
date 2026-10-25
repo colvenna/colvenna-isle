@@ -34,6 +34,7 @@ def git(*arguments):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--storage-image", help="local storage image for offline qualification; identity remains locked")
     args = parser.parse_args()
     output = args.output.resolve()
     if output.exists() or output == ROOT or ROOT in output.parents:
@@ -41,7 +42,7 @@ def main():
     if git("status", "--porcelain"):
         parser.error("commit source before building a release")
     head, tree = git("rev-parse", "HEAD"), git("rev-parse", "HEAD^{tree}")
-    version = re.fullmatch(r'__version__ = "([^"]+)"\n', (ROOT / "src/cove_duckdb/_version.py").read_text())[1]
+    version = re.fullmatch(r'__version__ = "([^"]+)"\n', (ROOT / "src/colvenna_isle/_version.py").read_text())[1]
     lock = json.loads((ROOT / "runtime/writer-lock.json").read_text())
     output.mkdir(parents=True)
     manifest = {"format_version": 1, "product": "colvenna-isle", "version": version, "source_commit": head,
@@ -51,6 +52,8 @@ def main():
     for name, (script, *arguments) in STEPS:
         command = [sys.executable, str(ROOT / "scripts" / script),
                    *[value.format(control=output / "control") for value in arguments], "--output", str(output / name)]
+        if name in {"writer", "query"} and args.storage_image:
+            command.extend(["--storage-image", args.storage_image])
         started = time.monotonic()
         with (output / (name + ".log")).open("x") as stream:
             result = subprocess.run(command, cwd=ROOT, stdout=stream, stderr=subprocess.STDOUT)

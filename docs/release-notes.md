@@ -1,15 +1,16 @@
 # Colvenna Isle 发行说明与支持矩阵
 
+<a id="200-unreleased"></a>
 <a id="120-unreleased"></a>
-## 1.2.0（未发行）
+## 2.0.0（未发行）
 
-当前开发版本为 `1.2.0.dev0`；尚未创建发行 tag 或 Release。产品名改为 **Colvenna Isle**，副标题为「S3 上的持久化分析数据库」/「Durable analytics databases on S3」。仓库、Python 发行包、制品、CI 和新部署资源采用 `colvenna-isle` 前缀，控制台与宣传素材采用 Colvenna 系列的 C 形流线标识。命名来源与 2026-10-24 的商标核查见[品牌说明](assets/README.md)。
+当前开发版本为 `2.0.0.dev0`；尚未创建发行 tag 或 Release。产品名为 **Colvenna Isle**，副标题为「S3 上的持久化分析数据库」/「Durable analytics databases on S3」，沿用 Colvenna 系列的 C 形流线标识。品牌来源见[品牌说明](assets/README.md)。
 
-本次不改变数据库、API 路由、请求/响应、权限或存储格式。Python 模块 `cove_duckdb`、`COVE_*` 配置、`X-Cove-*` 协议头与 `_cove_*` 内部字段保留。JSON Schema 的标识域名改为 `colvenna-isle.invalid`，OpenAPI 显示名同步更新；schema 内容与合同版本保持一致。
+本次是 **大版本破坏性迁移**（[#22](https://github.com/colvenna/colvenna-isle/issues/22)）：Python 导入改为 `colvenna_isle`，配置改为 `COLVENNA_*`，HTTP 头改为 `x-colvenna-*` / `X-Colvenna-*`，系统列改为 `_colvenna_*`，Airflow 使用 `ColvennaPipelineRunOperator`。旧名字不再作为别名接受。契约 revision 升到 2、生成文件在 `contracts/v2/`；公开 API 路由仍为 `/v1/`。原生空间格式升到 6，旧格式拒绝读写与备份。镜像内部路径改为 `/opt/colvenna`，固定上游二进制重新打包并更新存储镜像 digest。
 
-**部署升级是破坏性的**：ECR 仓库改为 `colvenna-isle-images`，栈、备份库、运行时资源与归属标签一并改名。新工具只管理新名称、新标签的资源，不能用于卸载旧环境。必须先使用旧版本工具备份并卸载旧运行时，再安装新版本，按当前合同重新生成数据；备份库与原生镜像的处理见[安装手册](installation.md#10-破坏性升级)。不自动迁移旧备份库、不承诺跨版本还原。运行时前缀为 `colvenna-isle-<namespace>-`，保留环境名与区域的 16 位 SHA-256 namespace，使加上 32 位构建 ID 的 Lambda 名称仍不超过 64 字符。
+AWS 资源沿用 `colvenna-isle-*`。从已发布 1.x 升级必须先用旧版本导出完整 ODS 事件历史与 direct 业务行，并完成旧版本备份；再关闭、卸载旧运行时，全新安装新版本。ODS 的事件 ID、业务源版本与删除事件通过[离线迁移工具](design/identifier-migration.md#离线-ods-重放工具)验证后重放，系统列由新写者重建；direct 业务行通过同步写 API 导入；流水线与键状态重新发布并全量重建。不沿用旧回执、水位或发布 ID，不直接还原旧原生备份，不能原地仅改列名。完整方案与回退边界见[迁移设计](design/identifier-migration.md)和[安装手册](installation.md#10-破坏性升级)。
 
-本次本地合同、服务、构建与浏览器检查只验证改名候选；该候选的 AWS 部署、功能 UAT 与性能验收为 `NOT_RUN`。下文的 1.1.0 / 1.0.0 记录仅属于已发布的历史源码。Colvenna 律师检索与商标申请为 `WAIVED_BY_REQUESTER_NOT_PASS`，请求者决定不作为发布门槛。
+本地服务、原生数据迁移、构建、示例和浏览器检查各自记录结果；AWS 安装、功能 UAT 与性能验收在实际执行前为 `NOT_RUN`。下文 1.1.0 / 1.0.0 为原样保留的已发布历史记录，其接口名与 PASS 不适用于当前候选。Colvenna 律师检索与商标申请为 `WAIVED_BY_REQUESTER_NOT_PASS`，请求者决定不作为发布门槛。
 
 ## 1.1.0（已发布，历史）
 

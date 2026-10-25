@@ -1,14 +1,14 @@
 ARG RUNTIME_BASE=python:3.12.14-slim-trixie@sha256:f77ac9e44ae96ef2c90b8053ea08c31f8be030f824196b0ae4db6d462c84e51f
 FROM ${RUNTIME_BASE}
 
-WORKDIR /opt/cove
-COPY artifacts/*.duckdb_extension artifacts/manifest.json /opt/cove/artifacts/
+WORKDIR /opt/colvenna
+COPY artifacts/*.duckdb_extension artifacts/manifest.json /opt/colvenna/artifacts/
 COPY artifacts/*.whl /tmp/wheels/
 RUN python -m pip install --no-index --no-deps /tmp/wheels/*.whl \
     && rm -rf /tmp/wheels \
     && python -c "import duckdb; assert duckdb.__version__ == '1.5.6'"
-COPY scripts/storage/worker.py /opt/cove/worker.py
-COPY scripts/storage/region.py /opt/cove/cove_duckdb/region.py
+COPY scripts/storage/worker.py /opt/colvenna/worker.py
+COPY scripts/storage/region.py /opt/colvenna/colvenna_isle/region.py
 
 USER 10001:10001
-ENTRYPOINT ["python", "/opt/cove/worker.py"]
+ENTRYPOINT ["python", "/opt/colvenna/worker.py"]

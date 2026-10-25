@@ -5,8 +5,8 @@ import unittest
 from unittest.mock import patch
 from urllib.error import URLError
 
-from cove_duckdb.control.registry import ControlError
-from cove_duckdb.writer import bridge
+from colvenna_isle.control.registry import ControlError
+from colvenna_isle.writer import bridge
 
 TARGET = {"task_arn": "arn:aws:ecs:us-west-2:123456789012:task/c/1", "task_definition": "writer:1",
           "image_digest": "sha256:" + "a" * 64, "source_commit": "a" * 40, "process_nonce": "n", "pid": 1,
@@ -31,7 +31,7 @@ class BridgeTimeoutTests(unittest.TestCase):
 
         with patch.object(bridge, "clients", return_value=(None, None)), \
                 patch.object(bridge, "Ownership", Ownership), patch.object(bridge, "urlopen", unreachable), \
-                patch.dict("os.environ", {"COVE_CONTROL_TABLE": "table"}):
+                patch.dict("os.environ", {"COLVENNA_CONTROL_TABLE": "table"}):
             result = bridge.handler({"identity": TARGET, "epoch": 3, "operation": operation}, None)
         return result, timeouts
 

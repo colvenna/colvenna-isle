@@ -1,0 +1,10 @@
+{
+  "release": "v1.1.0",
+  "purpose": "Historical public identifiers; no current service aliases",
+  "package": "cove_duckdb",
+  "account_variable": "COVE_ACCOUNT",
+  "system_prefix": "_cove_",
+  "principal_header": "x-cove-principal-id",
+  "contract_version": 1,
+  "native_format_version": 5
+}

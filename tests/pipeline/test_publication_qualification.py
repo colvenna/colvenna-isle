@@ -8,10 +8,10 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from cove_duckdb.control.registry import ControlError
-from cove_duckdb.pipeline.task_descriptor import staging_prefix
-from cove_duckdb.writer.ingestion import CommitUnknown
-from cove_duckdb.writer.publication_qualification import PublicationQualification
+from colvenna_isle.control.registry import ControlError
+from colvenna_isle.pipeline.task_descriptor import staging_prefix
+from colvenna_isle.writer.ingestion import CommitUnknown
+from colvenna_isle.writer.publication_qualification import PublicationQualification
 import test_publications as native_fixture
 
 
@@ -167,9 +167,9 @@ class PublicationFaults(unittest.TestCase):
         self.fixture.writer.close()
         script = '''
 import json,sys,duckdb
-from cove_duckdb.writer.ingestion import IngestionStore
-from cove_duckdb.pipeline.publications import Publications
-from cove_duckdb.writer.publication_qualification import _CommitFault
+from colvenna_isle.writer.ingestion import IngestionStore
+from colvenna_isle.pipeline.publications import Publications
+from colvenna_isle.writer.publication_qualification import _CommitFault
 c=duckdb.connect()
 c.execute("ATTACH '"+sys.argv[1]+"' AS warehouse")
 n=IngestionStore(c,json.loads(sys.argv[2]),lambda:{"epoch":1})

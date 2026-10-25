@@ -32,7 +32,7 @@ Colvenna Isle 提供同步业务表写入和异步批量接入。同步请求在
 | `update` | `updates`：每项含完整 `key` 与非空 `set` | 精确按注册键更新指定非键列；不修改键或服务端保留列 |
 | `delete` | `keys`：完整注册键 | 精确删除匹配行 |
 
-`upsert`、`update`、`delete` 要求唯一、非空的注册键；一个请求内同一键只能出现一次。`insert` 没有注册键时仍可使用请求级幂等，其他原生约束继续执行。未知字段、非法类型、缺失必填列、空批次和过期 schema 拒绝；Decimal/BIGINT/时间类型沿用[类型合同](../../src/cove_duckdb/contracts/v1/contracts.schema.json)。
+`upsert`、`update`、`delete` 要求唯一、非空的注册键；一个请求内同一键只能出现一次。`insert` 没有注册键时仍可使用请求级幂等，其他原生约束继续执行。未知字段、非法类型、缺失必填列、空批次和过期 schema 拒绝；Decimal/BIGINT/时间类型沿用[类型合同](../../src/colvenna_isle/contracts/v2/contracts.schema.json)。
 
 更新或删除未找到键时该项影响零行；`affected_rows` 统计插入/upsert 行、匹配的 update 行（包括值未变的行）或实际删除行。成功的零行请求仍记录唯一写入结果及提交序号。约束或任何一项校验失败时不允许部分成功。
 

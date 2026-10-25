@@ -855,8 +855,8 @@
   function addFile() {
     if (!state.pipeline && !state.creating) return;
     const path = $("file-new-path").value.trim();
-    if (path.length > 512 || !RELATIVE.test(path) || path.split("/")[0] === ".cove") {
-      notice("文件路径须为相对路径（字母、数字、_ . -，以 / 分隔），且不能使用 .cove/。", true);
+    if (path.length > 512 || !RELATIVE.test(path) || path.split("/")[0] === ".colvenna") {
+      notice("文件路径须为相对路径（字母、数字、_ . -，以 / 分隔），且不能使用 .colvenna/。", true);
       return;
     }
     if (state.files.some((file) => file.path === path || file.path.startsWith(path + "/")

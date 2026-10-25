@@ -2,8 +2,8 @@ import unittest
 import json
 from unittest.mock import Mock
 
-from cove_duckdb.control.registry import ControlError
-from cove_duckdb.writer.ownership import Ownership, matches, terminal_task
+from colvenna_isle.control.registry import ControlError
+from colvenna_isle.writer.ownership import Ownership, matches, terminal_task
 
 
 IDENTITY = {

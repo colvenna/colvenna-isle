@@ -2,7 +2,7 @@ spec_version: 1
 pipeline_id: orders
 name: Orders SQL and Python pipeline
 schedule:
-  owner: cove
+  owner: colvenna
   expression: "rate(1 minute)"
   timezone: UTC
 max_active_runs: 1

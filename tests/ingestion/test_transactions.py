@@ -7,7 +7,7 @@ from pathlib import Path
 
 import duckdb
 
-from cove_duckdb.writer.ingestion import CommitUnknown, IngestionError, IngestionStore, digest
+from colvenna_isle.writer.ingestion import CommitUnknown, IngestionError, IngestionStore, digest
 
 
 DEFINITION = {
@@ -138,7 +138,7 @@ class Transactions(unittest.TestCase):
                          {"input_records": 7, "inserted_events": 6, "duplicate_events": 1, "stale_events": 2,
                           "tombstones": 0})
         self.assertEqual(self.connection.execute(
-            "SELECT event_id, _cove_disposition FROM warehouse.ods.orders WHERE _cove_commit_sequence = 2 "
+            "SELECT event_id, _colvenna_disposition FROM warehouse.ods.orders WHERE _colvenna_commit_sequence = 2 "
             "ORDER BY event_id").fetchall(),
             [("e1", "CURRENT"), ("e2", "STALE"), ("e3", "CURRENT"), ("e4", "STALE"), ("e5", "CURRENT"),
              ("e6", "CURRENT")])

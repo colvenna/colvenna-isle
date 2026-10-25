@@ -8,15 +8,15 @@ from datetime import datetime, timezone
 
 from botocore.exceptions import ClientError
 
-from cove_duckdb.control.audit import Audit
-from cove_duckdb.control.costs import Costs
-from cove_duckdb.control.handler import handle
-from cove_duckdb.control.overview import Overview
-from cove_duckdb.control.pipelines import Pipelines
-from cove_duckdb.control.pipeline_artifacts import PipelineArtifacts
-from cove_duckdb.control.quotas import Quotas
-from cove_duckdb.control.registry import ControlError, Principal
-from cove_duckdb.control.trace import Trace
+from colvenna_isle.control.audit import Audit
+from colvenna_isle.control.costs import Costs
+from colvenna_isle.control.handler import handle
+from colvenna_isle.control.overview import Overview
+from colvenna_isle.control.pipelines import Pipelines
+from colvenna_isle.control.pipeline_artifacts import PipelineArtifacts
+from colvenna_isle.control.quotas import Quotas
+from colvenna_isle.control.registry import ControlError, Principal
+from colvenna_isle.control.trace import Trace
 from test_governance_runs import Fixture, query
 
 
@@ -279,7 +279,7 @@ class ConsoleTests(unittest.TestCase):
         stored = json.loads(item["record"]["S"])
         daily = stored["tasks"]["daily"]
         daily.update(skipped="NO_AFFECTED_PARTITIONS", epoch=None, release_id="release_previous", attempts=[])
-        from cove_duckdb.control import pipelines
+        from colvenna_isle.control import pipelines
 
         stored["integrity_sha256"] = pipelines.digest({name: member for name, member in stored.items()
                                                        if name != "integrity_sha256"})

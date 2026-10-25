@@ -4,8 +4,8 @@ import threading
 import unittest
 from types import SimpleNamespace
 
-from cove_duckdb.control.registry import ControlError
-from cove_duckdb.writer.runtime import Runtime
+from colvenna_isle.control.registry import ControlError
+from colvenna_isle.writer.runtime import Runtime
 
 
 class Ingestions:

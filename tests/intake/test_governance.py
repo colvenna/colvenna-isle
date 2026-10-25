@@ -8,10 +8,10 @@ from unittest.mock import Mock
 
 from botocore.exceptions import ReadTimeoutError
 
-from cove_duckdb.control.registry import ControlError, Principal
-from cove_duckdb.intake.backpressure import Admission, Backpressure, DEFAULT_POLICY, retention_decision
-from cove_duckdb.intake.handler import handle
-from cove_duckdb.intake.replay import Replay
+from colvenna_isle.control.registry import ControlError, Principal
+from colvenna_isle.intake.backpressure import Admission, Backpressure, DEFAULT_POLICY, retention_decision
+from colvenna_isle.intake.handler import handle
+from colvenna_isle.intake.replay import Replay
 import test_admission as fixture_module
 from test_admission import GENERATION, PAYLOAD, PRINCIPAL, SPACE, event
 
@@ -75,7 +75,7 @@ class AuditTrail:
     """The control audit seam: records exactly once per original replay intent."""
 
     def __init__(self):
-        from cove_duckdb.control.audit import Audit
+        from colvenna_isle.control.audit import Audit
         self.items = {}
         self.client, self.table = self, "unit_table"
         self.writer = Audit(self, "unit_table")

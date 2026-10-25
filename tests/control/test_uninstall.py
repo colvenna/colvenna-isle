@@ -9,7 +9,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 # The operator tools name their stacks from an explicit environment.
-os.environ.setdefault("COVE_ENVIRONMENT", "qa")
+os.environ.setdefault("COLVENNA_ENVIRONMENT", "qa")
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts/aws"))
@@ -127,7 +127,7 @@ class Uninstall(unittest.TestCase):
                 patch.object(sys, "argv", ["uninstall.py", "--output", parent + "/receipts"]):
             uninstall.main()
         self.assertEqual([tool for tool, _ in calls], ["admission.py", "manage.py", "manage.py"])
-        self.assertTrue(all(env["COVE_ACCOUNT"] == "123456789012" and env["COVE_ENVIRONMENT"] == "qa"
+        self.assertTrue(all(env["COLVENNA_ACCOUNT"] == "123456789012" and env["COLVENNA_ENVIRONMENT"] == "qa"
                             for _, env in calls))
 
 
