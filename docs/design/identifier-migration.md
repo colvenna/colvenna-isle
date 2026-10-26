@@ -1,6 +1,6 @@
 # Colvenna 标识迁移（2.0.0）
 
-本设计对应 [Issue #22](https://github.com/colvenna/colvenna-isle/issues/22)。当前候选为 `2.0.0.dev0`，尚未发行。采用大版本破坏性迁移，不提供双名称过渡期。
+本设计对应 [Issue #22](https://github.com/colvenna/colvenna-isle/issues/22)。适用发行版本为 `2.0.0`（tag `v2.0.0`）。采用大版本破坏性迁移，不提供双名称过渡期。
 
 | 接口 | 当前名称与处理 |
 | --- | --- |
@@ -47,4 +47,4 @@ PYTHONPATH=src /tmp/colvenna-build/bin/python -m colvenna_isle.migration \
 
 ## 验证边界
 
-本地测试覆盖新包、配置、身份头和契约，以及旧格式拒绝；原生测试覆盖精确金额、删除 tombstone、迟到旧版本、原幂等键重试和新系统列。安装脚本、模板、Lambda ZIP、写者 / 查询镜像、示例和浏览器分别验证。AWS 全新安装和升级数据验收必须单独记录，未实际执行时为 `NOT_RUN`；历史 1.1.0 PASS 不计入本候选。
+本地测试覆盖新包、配置、身份头和契约，以及旧格式拒绝；原生测试覆盖精确金额、删除 tombstone、迟到旧版本、原幂等键重试和新系统列。安装脚本、模板、Lambda ZIP、写者 / 查询镜像、示例和浏览器分别验证。AWS 全新安装、隔离还原和历史形状数据重放的范围见 [2.0.0 UAT 报告](../uat/v2.0.0-report.md)。历史形状 fixture 的重放不等于已迁移生产 1.x 环境；历史 1.1.0 PASS 不计入 2.0.0。

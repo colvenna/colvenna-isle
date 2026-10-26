@@ -1,6 +1,6 @@
 # Colvenna Isle 用户手册
 
-当前源码为未发行的 `2.0.0.dev0` 候选。包、配置、协议头与系统列统一采用 Colvenna 名称，契约 revision 为 2，原生格式为 6；1.x 用户需按[迁移设计](design/identifier-migration.md)升级。下文的 AWS 验收属于历史版本；候选的运行时验收按确切源码与制品摘要单独记录，见 [PR #23](https://github.com/colvenna/colvenna-isle/pull/23) 和[发行说明](release-notes.md#200-unreleased)。
+本手册适用于 Colvenna Isle `2.0.0`（tag `v2.0.0`）。包、配置、协议头与系统列统一采用 Colvenna 名称，契约 revision 为 2，原生格式为 6；1.x 用户需按[迁移设计](design/identifier-migration.md)升级。当前 AWS 验收按确切源码与制品摘要记录，见 [2.0.0 UAT 报告](uat/v2.0.0-report.md)与[发行说明](release-notes.md#v2-acceptance)。历史 1.x 的记录不计入本版本。
 
 本手册面向应用开发者、数据工程师和分析人员，说明如何在一个已安装的 Colvenna Isle 环境中工作：
 
@@ -14,7 +14,7 @@
 安装、升级、开通空间、备份还原与卸载属于运维工作，见[安装部署手册](installation.md)。每个路由、字段和错误码的完整定义见 [API 合同](design/api-contract.md)。规格、支持矩阵和已知限制见[发行说明](release-notes.md)。想先跑通一遍完整流程，可以运行 [quickstart](../examples/quickstart/README.md)。
 
 
-1.1.0 的区域由安装环境指定，为标准 AWS 商业区域；使用者继续使用该环境的 API / Web 地址。验收覆盖 `us-east-2` 全部 56 项功能 UAT 与 `us-west-2` 回归，其他商业区域未单独验收。账号、区域、镜像和备份库前置条件见[安装手册](installation.md#33-区域前置条件)，实际验收范围见[发行说明](release-notes.md#验收)。
+2.0.0 的区域由安装环境指定，为标准 AWS 商业区域；使用者继续使用该环境的 API / Web 地址。本版本的 `us-west-2` 验收范围见 [UAT 报告](uat/v2.0.0-report.md)，其他商业区域未在本版本单独验收。账号、区域、镜像和备份库前置条件见[安装手册](installation.md#33-区域前置条件)，实际验收范围见[发行说明](release-notes.md#v2-acceptance)。
 
 ## 目录
 
@@ -648,7 +648,7 @@ curl -s "$COLVENNA_API_URL/v1/spaces/$COLVENNA_SPACE/ingestions/<ingestion_id>" 
 
 - `authority` 说明结果来源：`NATIVE_LEDGER`（数据库账本，权威）、`PROJECTION`（状态投影，可能滞后）或 `UNAVAILABLE`。
 - `observed_at` 和 `projection_version` 是该观测的时间和版本；状态投影可能滞后于实际提交。
-- 1.1.0 中这个接口只报告 ODS 的提交：`publication.status` 始终为 `NOT_PUBLISHED`，`dwd`、`dws`、`ads` 三层为 `NOT_IMPLEMENTED`。下游加工进度请看流水线运行状态（[8.11 节](#811-运行)）或 Admin Console 的诊断页。
+- 2.0.0 中这个接口只报告 ODS 的提交：`publication.status` 始终为 `NOT_PUBLISHED`，`dwd`、`dws`、`ads` 三层为 `NOT_IMPLEMENTED`。下游加工进度请看流水线运行状态（[8.11 节](#811-运行)）或 Admin Console 的诊断页。
 
 ### 5.6 背压
 
@@ -1846,7 +1846,7 @@ curl -s -X POST "$COLVENNA_API_URL/v1/admin/spaces/$COLVENNA_SPACE/retention/hol
 
 ## 11. 限制与配额汇总
 
-以下为 1.1.0 的准入上限，不是性能承诺。规格与实测基线见[发行说明](release-notes.md)和[性能报告](performance.md)。
+以下为 2.0.0 的准入上限，不是性能承诺。规格与实测基线见[发行说明](release-notes.md)和[性能报告](performance.md)。
 
 | 领域 | 项目 | 上限 |
 | --- | --- | --- |

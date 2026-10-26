@@ -7,7 +7,7 @@
 
 <p align="center">
   <a href="LICENSE"><img alt="License: Apache-2.0" src="https://img.shields.io/badge/License-Apache--2.0-0b6b69"></a>
-  <a href="docs/release-notes.md"><img alt="Release: 1.1.0" src="https://img.shields.io/badge/Release-1.1.0-475569"></a>
+  <a href="docs/release-notes.md"><img alt="Release: 2.0.0" src="https://img.shields.io/badge/Release-2.0.0-475569"></a>
 </p>
 
 <p align="center">
@@ -20,18 +20,15 @@
 
 Colvenna Isle is a database and analytics product for AWS. Applications write through an API, data teams transform with SQL and Python pipelines, and analysts query durable analytics databases stored in Amazon S3 from a Query Editor, with an Admin Console for keys, pipelines, runtime environments and operations.
 
-## Release 1.1.0
+## Release 2.0.0
 
-The next release completes the Colvenna identifiers across code, configuration, protocols and data; `main` is `2.0.0.dev0` (unreleased). This is a breaking upgrade: see the [migration design](docs/design/identifier-migration.md). Candidate AWS acceptance is recorded for each exact source commit and artifact digest in [PR #23](https://github.com/colvenna/colvenna-isle/pull/23).
+Version 2.0.0 ([GitHub Release `v2.0.0`](https://github.com/colvenna/colvenna-isle/releases/tag/v2.0.0)) completes the Colvenna identifiers across code, configuration, protocols and data: `colvenna_isle`, `COLVENNA_*`, `x-colvenna-*` and `_colvenna_*`. Contract revision is 2; native space format is 6; API routes remain `/v1/`.
 
-Published version 1.1.0 ([GitHub Release `v1.1.0`](https://github.com/colvenna/colvenna-isle/releases/tag/v1.1.0)) provides the historical 1.x interfaces and capabilities accepted on AWS:
+Upgrading from 1.x requires an old-version backup and verified business-data export, uninstalling the old runtime, then a fresh 2.0.0 installation and replay. Internal receipts and watermarks are rebuilt. See the [migration design](docs/design/identifier-migration.md) before upgrading.
 
-- a single AWS account of your choice (the account ID is taken from the deployment, never from the source), ARM64;
-- a standard commercial AWS region chosen at installation (`--region`): `us-east-2` passed fresh installation, all 56 functional UAT cases, backup and isolated restore, upgrade, interrupted redeploy and uninstall; `us-west-2` passed regression; other commercial regions are accepted by configuration but not qualified;
-- DuckDB 1.5.6 on the S3 object filesystem;
-- the writer and query services at 2 vCPU / 4 GiB.
+The product runs in a single AWS account of your choice on ARM64, in a standard commercial region selected at installation (`--region`). It uses DuckDB 1.5.6 on the S3 object filesystem, with writer and query services at 2 vCPU / 4 GiB. Current qualification is recorded separately from historical 1.x results in the [2.0.0 UAT report](docs/uat/v2.0.0-report.md).
 
-1.1.0 also loads `after_write` / `after_ingestion` snapshots in typed Arrow batches and checks source row and byte quotas before copying. Upgrading from 1.0.0 requires uninstalling with the 1.0.0 tools and installing 1.1.0 fresh. The [release notes](docs/release-notes.md) list the changes, the acceptance evidence, the support matrix, sizes, limits and measured baselines, and the items that are planned but not implemented. Measured baselines are in the [performance report](docs/performance.md); no SLA target is claimed. User acceptance is defined by the [UAT test cases](docs/uat/test-cases.md).
+The [release notes](docs/release-notes.md) give the changes, exact source identities, regional qualification and limits. Performance was not remeasured for 2.0.0; the [performance report](docs/performance.md) retains historical measurements, with no SLA target. Functional acceptance is defined by the [UAT test cases](docs/uat/test-cases.md).
 
 ## Documentation
 
@@ -46,13 +43,13 @@ Published version 1.1.0 ([GitHub Release `v1.1.0`](https://github.com/colvenna/c
 
 ## Get started
 
-1. For the current candidate, use a clean checkout of the reviewed commit and run `./install.sh fresh --environment <name> --account <account-id> --region <region>`. It checks the deployment host (an ARM64 EC2 instance with an instance role, Python 3.12, Docker for `linux/arm64`, Node.js), builds the release and installs it as a new environment. See the [installation guide](docs/installation.md).
+1. Use a clean checkout of tag `v2.0.0` and run `./install.sh fresh --environment <name> --account <account-id> --region <region>`. It checks the deployment host (an ARM64 EC2 instance with an instance role, Python 3.12, Docker for `linux/arm64`, Node.js), builds the release and installs it as a new environment. See the [installation guide](docs/installation.md).
 2. Provision a space and its first administrator key, then run the [quickstart](examples/quickstart/README.md). It covers API ingestion, a synchronous table write with `after_write` read-back, and a published SQL + pandas pipeline queried through SQL.
 3. Continue with the [user guide](docs/user-guide.md) and the [API contract](docs/design/api-contract.md).
 
 ## Product capabilities
 
-| Area | Release 1.1.0 |
+| Area | Release 2.0.0 |
 | --- | --- |
 | Ingestion | Batch API, schema validation, idempotency, FIFO buffering, and traceable ingestion receipts |
 | Direct writes | Registered direct tables, native constraints, atomic insert/upsert/update/delete and durable original receipts ([synchronous writes](docs/design/synchronous-writes.md)) |
@@ -88,7 +85,7 @@ The database's physical S3 objects are managed by SlateDB, including SSTs, WAL, 
 
 Long jobs bind to immutable input files, stage their output in S3, and let the writer import chunks before publishing a new result version. Storage manifest polling does not establish freshness of a persistent DuckDB attachment; ingestion, commit, and query visibility are separate states. See the [engineering design](docs/design/aws-product-design.md).
 
-Python tasks read named Parquet inputs through a context file and output Parquet plus a manifest. Dependencies such as pandas are resolved before publication, locked with hashes and packaged into immutable environments. Standard Lambda supports bounded tasks up to 15 minutes; large jobs use ECS. Lambda Managed Instances and Durable Functions profiles are planned and not part of 1.1.0.
+Python tasks read named Parquet inputs through a context file and output Parquet plus a manifest. Dependencies such as pandas are resolved before publication, locked with hashes and packaged into immutable environments. Standard Lambda supports bounded tasks up to 15 minutes; large jobs use ECS. Lambda Managed Instances and Durable Functions profiles are planned and not part of 2.0.0.
 
 [Interactive architecture](docs/design/architecture.html) · [Engineering design](docs/design/aws-product-design.md) · [API contract](docs/design/api-contract.md) · [Pipeline design](docs/design/pipeline-design.md)
 
@@ -120,7 +117,7 @@ The [development builder](scripts/build_release.py) packages a clean source comm
 
 Use an independent branch and submit a pull request. Keep release copy, API contracts, and engineering design consistent, and distinguish current upstream capabilities from product requirements. See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
 
-Releases make no backward-compatibility or data-migration commitment. Upgrades are breaking: close the environment, deploy the new release and rebuild affected spaces (see the [installation guide](docs/installation.md#10-破坏性升级)). How later releases handle breaking changes is stated in their release notes.
+Releases make no backward-compatibility or automatic in-place migration commitment. For 1.x to 2.0.0, export and verify business data before closing and uninstalling the old runtime, then install fresh and replay as the [installation guide](docs/installation.md#10-破坏性升级) describes. Each release states its own upgrade boundary.
 
 ## License and attribution
 

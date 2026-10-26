@@ -9,7 +9,7 @@
 
 <p align="center">
   <a href="LICENSE"><img alt="License: Apache-2.0" src="https://img.shields.io/badge/License-Apache--2.0-0b6b69"></a>
-  <a href="docs/release-notes.md"><img alt="Release: 1.1.0" src="https://img.shields.io/badge/Release-1.1.0-475569"></a>
+  <a href="docs/release-notes.md"><img alt="Release: 2.0.0" src="https://img.shields.io/badge/Release-2.0.0-475569"></a>
 </p>
 
 <p align="center">
@@ -22,18 +22,15 @@
 
 Colvenna Isle 是面向 AWS 的数据库与分析产品，整合 API 接入、S3 上的持久化分析数据库、SQL/Python 分层加工、Query Editor 和 Admin Console。
 
-## 1.1.0 发行
+## 2.0.0 发行
 
-下一版本完成代码、配置、协议与数据中的 Colvenna 标识迁移；`main` 为 `2.0.0.dev0`（未发行）。这是大版本破坏性升级，见[迁移设计](docs/design/identifier-migration.md)；候选的 AWS 验收按确切源码与制品摘要单独记录，见 [PR #23](https://github.com/colvenna/colvenna-isle/pull/23)。
+2.0.0（[GitHub Release `v2.0.0`](https://github.com/colvenna/colvenna-isle/releases/tag/v2.0.0)）完成代码、配置、协议与数据中的 Colvenna 标识迁移：`colvenna_isle`、`COLVENNA_*`、`x-colvenna-*`、`_colvenna_*`。契约 revision 为 2，原生空间格式为 6，API 路由仍为 `/v1/`。
 
-已发布的 1.1.0（[GitHub Release `v1.1.0`](https://github.com/colvenna/colvenna-isle/releases/tag/v1.1.0)）提供历史 1.x 接口与能力，以下属于该版本的实际 AWS 验收：
+从 1.x 升级需先用旧版本备份并导出经校验的业务数据，卸载旧运行时，再全新安装 2.0.0 并重放。内部回执与水位重新建立，执行前阅读[迁移设计](docs/design/identifier-migration.md)。
 
-- 由你选择的单个 AWS 账号（账号 ID 来自部署环境，不写在源码中）、ARM64；
-- 安装时指定的标准 AWS 商业区域（`--region`）：`us-east-2` 完成全新安装、全部 56 项功能 UAT、备份与隔离还原、升级、中断重部署与卸载，`us-west-2` 完成回归；其他商业区域在配置上可用，但未单独验收；
-- 运行在 S3 对象文件系统上的 DuckDB 1.5.6；
-- 写者与查询服务规格为 2 vCPU / 4 GiB。
+产品部署到你选择的单个 AWS 账号，采用 ARM64，安装时指定标准商业区域（`--region`）。存储引擎为运行在 S3 对象文件系统上的 DuckDB 1.5.6，写者与查询服务各为 2 vCPU / 4 GiB。当前验收与历史 1.x 结果分别记录，见 [2.0.0 UAT 报告](docs/uat/v2.0.0-report.md)。
 
-1.1.0 还改用带类型的 Arrow 批次装载 `after_write` / `after_ingestion` 快照，并在复制前检查行数与字节配额。从 1.0.0 升级需要先用 1.0.0 的工具卸载，再全新安装 1.1.0。变更、验收证据、支持矩阵、规格、限制、测得基线和尚未实现的计划项见[发行说明](docs/release-notes.md)，实测基线见[性能报告](docs/performance.md)（不承诺 SLA）。用户验收标准见 [UAT 测试用例](docs/uat/test-cases.md)。
+变更、确切源码、区域验收与限制见[发行说明](docs/release-notes.md)。2.0.0 未重测性能，[性能报告](docs/performance.md)保留历史测量，不承诺 SLA。功能验收标准见 [UAT 测试用例](docs/uat/test-cases.md)。
 
 ## 文档
 
@@ -48,7 +45,7 @@ Colvenna Isle 是面向 AWS 的数据库与分析产品，整合 API 接入、S3
 
 ## 开始使用
 
-1. 为当前候选准备已审查提交的干净检出，运行 `./install.sh fresh --environment <名称> --account <账号 ID> --region <区域>`。它先检查部署主机（带实例角色的 ARM64 EC2，以及 Python 3.12、支持 `linux/arm64` 的 Docker、Node.js），再构建 release 并安装为一个新环境。见[安装部署手册](docs/installation.md)。
+1. 准备 tag `v2.0.0` 的干净检出，运行 `./install.sh fresh --environment <名称> --account <账号 ID> --region <区域>`。它先检查部署主机（带实例角色的 ARM64 EC2，以及 Python 3.12、支持 `linux/arm64` 的 Docker、Node.js），再构建 release 并安装为一个新环境。见[安装部署手册](docs/installation.md)。
 2. 开通空间并签发首个管理员 Key，然后运行 [quickstart](examples/quickstart/README.md)。它覆盖 API 接入、同步表写入与 `after_write` 读回，以及发布后的 SQL + pandas 流水线结果查询。
 3. 继续阅读[用户手册](docs/user-guide.md)与 [API 契约](docs/design/api-contract.md)。
 
@@ -85,7 +82,7 @@ Authorizer 和管理 Lambda 通过 AWS SDK 访问 DDB。SQL 请求通过 API Gat
 
 四层先放在同一个数据库的四个 schema 中。长任务读取不可变输入，结果分块导入后发布；持续影响接入的分析写入负载，可以通过拆分接入库与服务库隔离。
 
-Python 通过 context.json 读取命名 Parquet 输入，输出 Parquet 和清单；pandas 等包在发布前锁定全部依赖和 hash，构建固定运行环境。普通 Lambda 上限为 15 分钟，大任务选择 ECS。Lambda Managed Instances 与 Durable Functions profile 属于计划项，不在 1.1.0 范围内。
+Python 通过 context.json 读取命名 Parquet 输入，输出 Parquet 和清单；pandas 等包在发布前锁定全部依赖和 hash，构建固定运行环境。普通 Lambda 上限为 15 分钟，大任务选择 ECS。Lambda Managed Instances 与 Durable Functions profile 属于计划项，不在 2.0.0 范围内。
 
 manifest 轮询不能证明常驻 DuckDB 附件的查询新鲜度，见[工程设计](docs/design/aws-product-design.md)。产品区分“已接收”“已提交”“分析版本已发布”，查询返回实际使用的数据版本。
 
@@ -117,7 +114,7 @@ python3 scripts/check_docs.py
 
 仓库改动通过独立分支和 Pull Request 提交。请参阅[贡献说明](CONTRIBUTING.md)和[安全说明](SECURITY.md)。
 
-各版本不承诺向后兼容或旧数据迁移。升级是破坏性的：先关闭环境，再部署新 release，并重建受影响的空间（见[安装部署手册](docs/installation.md#10-破坏性升级)）。之后的版本如何处理破坏性变更，在各自的发行说明中说明。
+各版本不承诺向后兼容或自动原地迁移。从 1.x 升级到 2.0.0 时，先导出并核对业务数据，再关闭和卸载旧运行时、全新安装并重放，见[安装部署手册](docs/installation.md#10-破坏性升级)。之后的版本在各自发行说明中说明升级边界。
 
 项目源码、文档、设计及原创品牌资源采用 [Apache-2.0](LICENSE)。第三方组件（DuckDB 及其扩展、锁定的 Python 发行包、基础镜像、Archify 架构图运行代码）保留各自许可，详见[第三方许可](THIRD_PARTY_NOTICES.md)。
 

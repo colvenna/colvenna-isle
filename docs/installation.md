@@ -1,6 +1,6 @@
 # Colvenna Isle 安装部署手册
 
-本手册适用于当前未发行的 `2.0.0.dev0` 候选，面向在自己的 AWS 账号和商业区域（partition `aws`）中安装和运维 Colvenna Isle 的运维人员。改名后的 AWS 安装验收按确切源码与制品摘要单独记录，见 [PR #23](https://github.com/colvenna/colvenna-isle/pull/23)；1.1.0 的历史验收不代表当前候选通过。涵盖以下内容：
+本手册适用于 Colvenna Isle `2.0.0`（tag `v2.0.0`），面向在自己的 AWS 账号和商业区域（partition `aws`）中安装和运维 Colvenna Isle 的运维人员。当前版本的 AWS 安装与功能验收按确切源码和制品摘要记录，见 [2.0.0 UAT 报告](uat/v2.0.0-report.md)；1.x 历史验收另行保留。涵盖以下内容：
 
 - 准备部署主机与原生存储镜像；
 - 构建 release；
@@ -18,7 +18,7 @@
 ```bash
 git clone https://github.com/colvenna/colvenna-isle.git
 cd colvenna-isle
-git checkout --detach <已审查的候选提交>
+git checkout --detach v2.0.0
 ./install.sh fresh --environment prod --account <12 位账号 ID> --region <目标区域> \
   --space sales_prod --token-output /secure/path/sales_prod-admin.token
 ```
@@ -47,16 +47,16 @@ git checkout --detach <已审查的候选提交>
 
 ## 1. 支持范围
 
-| 维度 | 当前候选的配置范围（1.1.0 验收为历史） |
+| 维度 | 2.0.0 的配置范围与验收 |
 | --- | --- |
 | AWS 账号 | 任意单个账号。账号 ID 不写在源码中：服务由栈注入 `COLVENNA_ACCOUNT`，运维工具以 `COLVENNA_ACCOUNT` 为准，并与当前凭证核对 |
-| 区域 | 按显式配置（`--region` / `COLVENNA_REGION` / `AWS_REGION`）部署到标准商业分区 `aws`。`us-east-2` 已完成全部功能验收，`us-west-2` 已完成回归；其他商业区域未单独验收。验收源码与范围见[发行说明](release-notes.md#验收)。tag `v1.0.0` 只支持 `us-west-2` |
+| 区域 | 按显式配置（`--region` / `COLVENNA_REGION` / `AWS_REGION`）部署到标准商业分区 `aws`。2.0.0 的 `us-west-2` 验收结果见 [UAT 报告](uat/v2.0.0-report.md)；其他商业区域未在本版本单独验收，历史 1.x 区域结果不计入本版本 |
 | CPU 架构 | ARM64（Graviton）：写者、查询、计算 Task、Lambda、运行环境构建都只构建 ARM64 |
 | 规格 | 写者与查询服务各为 ECS Fargate 2 vCPU / 4 GiB，见[发行说明](release-notes.md#规格) |
 
 安装、使用、备份还原、升级和卸载已在一个 AWS 账号中实际验收。其他账号只是代码层面支持（账号由部署环境决定），没有单独验收。
 
-区域实现于 2026-10-21 在同一账号的 `us-east-2` 与 `us-west-2` 中验收。东区完成全新安装、56 项功能 UAT、同区域备份与隔离还原、不同源码升级、中断部署后的同一制品重部署及卸载；西区完成全新安装、功能回归、同名环境的区域隔离检查与卸载。区域前置条件见[§3.3](#33-区域前置条件)；中国区、GovCloud 与隔离分区不在范围内。
+2.0.0 的验收使用 `us-west-2` 同一账号内的两套新环境，功能结果与各源码身份见 [UAT 报告](uat/v2.0.0-report.md)。历史 1.1.0 的双区域验收见[历史发行说明](release-notes.md#验收)，不代表 2.0.0 在其他区域通过。区域前置条件见[§3.3](#33-区域前置条件)；中国区、GovCloud 与隔离分区不在范围内。
 
 ## 2. 部署组成
 
@@ -183,7 +183,7 @@ docker pull "$COLVENNA_ACCOUNT.dkr.ecr.$COLVENNA_REGION.amazonaws.com/colvenna-i
 
 ```bash
 git clone https://github.com/colvenna/colvenna-isle.git && cd colvenna-isle
-git checkout --detach <已审查的候选提交>
+git checkout --detach v2.0.0
 COLVENNA_ACCOUNT=$COLVENNA_ACCOUNT /tmp/colvenna-build/bin/python scripts/build_product.py --output /path/outside/repo/release-candidate
 ```
 
@@ -205,7 +205,7 @@ release 目录中的 `manifest.json` 记录以下内容，任何一项失败都�
 
 `COLVENNA_ACCOUNT` 只用于在本机找到存储镜像。套件本身使用固定的测试账号 `123456789012`，不访问 AWS。
 
-1.1.0 的写者和查询镜像都安装 hash 锁定的 pyarrow 24.0.0；查询镜像用它批量装载写者提供的快照，构建时核对版本和原生类型测试，见[发行说明](release-notes.md#110-的变更)。
+2.0.0 的写者和查询镜像都安装 hash 锁定的 pyarrow 24.0.0；查询镜像用它批量装载写者提供的快照，构建时核对版本和原生类型测试，见[发行说明](release-notes.md#110-的变更)。
 
 ## 6. 全新安装
 

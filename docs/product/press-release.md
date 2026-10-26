@@ -4,7 +4,7 @@ Colvenna Isle 推出云端数据库与分析平台：通过 API 写入，在 S3 
 
 **将数据接入、分层加工、SQL 查询、运行监控和访问管理整合为一个产品，为开发者与数据团队提供从业务数据到分析结果的完整工作流程。**
 
-*下一版本产品发布文案 · 未发行 · 2026-10-24*
+*Colvenna Isle 2.0.0 · tag `v2.0.0`*
 
 Colvenna Isle 推出基于 AWS 的云端数据库与分析平台。应用可以通过统一 API 写入订单、业务事件、日志和运营数据，数据团队可以使用 SQL 和 Python 完成清洗、建模与聚合，使用 SQL 查询分析结果，管理员可以在统一控制台中观察系统状态并管理访问凭证。产品以 Amazon S3 作为持久存储，通过原生引擎提供数据库与分析能力，将持续接入与分析处理连接起来。
 
@@ -72,4 +72,4 @@ Colvenna Isle 面向需要通过 API 汇集业务数据、建立 SQL/Python 加�
 
 开发者通过 API 持续接入数据，数据团队通过 SQL 和 Python 构建可复用的数据集，管理员通过控制台管理运行状态和访问权限。接入回执、处理水位与发布版本贯穿整个流程，使团队能够从一笔写入追踪到其对应的分析结果。
 
-产品前身的历史版本 1.0.0 于 2026-10-20 首次发行，1.1.0 于 2026-10-21 发行。Colvenna Isle 名称从下一版本采用，当前 `2.0.0.dev0` 尚未发行，改名后的 AWS 验收按确切源码与制品摘要单独记录，见 [PR #23](https://github.com/colvenna/colvenna-isle/pull/23)。产品以一组 CloudFormation 栈部署在用户自己的 AWS 账号中，费用就是该账号中实际使用的 AWS 资源费用。历史 1.1.0 部署在单个 AWS 账号中、安装时指定的标准 AWS 商业区域（已在 `us-east-2` 与 `us-west-2` 验收），运行于 ARM64（Graviton），写者与查询服务规格为 2 vCPU / 4 GiB。支持矩阵、规格、限制与历史实测基线见[发行说明](../release-notes.md)和[性能与容量基线](../performance.md)；安装与使用方式见[安装部署手册](../installation.md)、[用户手册](../user-guide.md)和 [quickstart](../../examples/quickstart/README.md)。
+产品前身的历史版本 1.0.0 于 2026-10-20 首次发行，1.1.0 于 2026-10-21 发行。2.0.0 以 Colvenna Isle 名称发行，包、配置、协议与系统列统一采用 Colvenna 标识。AWS 验收按确切源码与制品摘要记录，见 [2.0.0 UAT 报告](../uat/v2.0.0-report.md)，从历史版本升级前必须阅读[迁移设计](../design/identifier-migration.md)。产品以一组 CloudFormation 栈部署在用户自己的 AWS 账号中，费用就是该账号中实际使用的 AWS 资源费用。历史 1.1.0 部署在单个 AWS 账号中、安装时指定的标准 AWS 商业区域（已在 `us-east-2` 与 `us-west-2` 验收），运行于 ARM64（Graviton），写者与查询服务规格为 2 vCPU / 4 GiB。支持矩阵、规格、限制与历史实测基线见[发行说明](../release-notes.md)和[性能与容量基线](../performance.md)；安装与使用方式见[安装部署手册](../installation.md)、[用户手册](../user-guide.md)和 [quickstart](../../examples/quickstart/README.md)。

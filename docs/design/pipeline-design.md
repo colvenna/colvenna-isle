@@ -1,6 +1,6 @@
 # 内置流水线：SQL、Python 与外部编排
 
-适用版本：2.0.0 候选；本文使用当前标识与契约；历史 1.1.0 的 AWS 验收不代表候选通过，候选验证范围见 [PR #23](https://github.com/colvenna/colvenna-isle/pull/23)。定义与版本、运行与 DAG、调度、取消与重试、SQL / Python 任务、固定输入、原生发布与 Airflow 编排均已实现，使用方式见[用户手册](../user-guide.md)。任务示例用于验证数据合同。
+适用版本：2.0.0（tag `v2.0.0`）；本文使用当前标识与契约，验证范围见 [2.0.0 UAT 报告](../uat/v2.0.0-report.md)。下文沿用的 1.1.0 行为说明适用于 2.0.0，历史 AWS 结果不计入本版本。定义与版本、运行与 DAG、调度、取消与重试、SQL / Python 任务、固定输入、原生发布与 Airflow 编排均已实现，使用方式见[用户手册](../user-guide.md)。任务示例用于验证数据合同。
 
 合同版本 2 的[机器合同](../../src/colvenna_isle/contracts/v2/contracts.schema.json)、[profile 与准入上限](../../src/colvenna_isle/contracts/v2/profiles.json)和[语义校验器](../../src/colvenna_isle/contracts/validation.py)明确准入上限、输入/输出字段和状态规则；JSON Schema 通过仍需语义及真实资源校验。writer 任务省略 runtime_environment/input_mode，使用平台固定环境和原生版本绑定；外部任务显式声明这些字段。
 
