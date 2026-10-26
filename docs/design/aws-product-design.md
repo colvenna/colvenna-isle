@@ -1,6 +1,6 @@
 # Colvenna Isle：AWS 数据库与分析产品设计
 
-当前未发行的 `2.0.0.dev0` 候选采用 Colvenna 接口名、契约 revision 2 与原生格式 6，功能架构沿用下文的 1.1.0。标识与数据迁移见[迁移设计](identifier-migration.md)。栈、ECR、备份库、归属标签与运行时前缀统一采用 `colvenna-isle`；升级边界见[发行说明](../release-notes.md#200-unreleased)与[安装手册](../installation.md#10-破坏性升级)。不将历史 AWS 验收计入新候选。
+Colvenna Isle `2.0.0`（tag `v2.0.0`）采用 Colvenna 接口名、契约 revision 2 与原生格式 6，功能架构沿用下文的 1.1.0。标识与数据迁移见[迁移设计](identifier-migration.md)。栈、ECR、备份库、归属标签与运行时前缀统一采用 `colvenna-isle`；升级边界见[发行说明](../release-notes.md#v2-acceptance)与[安装手册](../installation.md#10-破坏性升级)。本版本的 AWS 结果见 [UAT 报告](../uat/v2.0.0-report.md)，历史结果不计入本版本。
 
 适用版本：1.1.0。本文描述 1.1.0 的产品架构；支持矩阵、规格与限制见[发行说明](../release-notes.md)。文中标为演进方向的内容（拆库、多 DuckDB 分片、Lambda Managed Instances / Durable Functions）尚未实现，不在 1.1.0 范围内。
 

@@ -1,8 +1,8 @@
 # Colvenna Isle UAT 测试用例
 
-本文定义发行前的用户验收测试（UAT），自 1.0.0 起适用。每个用例都按[安装部署手册](../installation.md)和[用户手册](../user-guide.md)中写明的操作执行，并给出明确的判定标准。
+本文定义发行前的用户验收测试（UAT），自 1.0.0 起适用，当前发行版本为 2.0.0（tag `v2.0.0`）。每个用例都按[安装部署手册](../installation.md)和[用户手册](../user-guide.md)中写明的操作执行，并给出明确的判定标准。
 
-执行结果记录在 UAT 报告中，随各版本的 [GitHub Release](https://github.com/colvenna/colvenna-isle/releases) 发布；1.1.0 的区域验收范围见[发行说明](../release-notes.md#验收)。
+执行结果记录在 UAT 报告中，随各版本的 [GitHub Release](https://github.com/colvenna/colvenna-isle/releases) 发布；2.0.0 的逐项结果见 [UAT 报告](v2.0.0-report.md)；1.1.0 的历史区域验收范围见[发行说明](../release-notes.md#验收)。
 
 ## 1. 范围
 
@@ -25,7 +25,7 @@ UAT 只包含功能用例，**默认不执行性能测试**。性能与容量测
 | A | 功能用例 | 按手册执行 `./install.sh fresh`，并通过 `--` 加上只用于鉴定的 `--writer-probe-space`：它为一个 `probe_*` 空间开放只读的原生观测接口，用来独立核对提交结果，不改变产品行为 |
 | B | 全新安装、quickstart、隔离还原、升级 / 重新部署、卸载 | 严格按手册执行 `./install.sh fresh`，不加任何鉴定选项 |
 
-两套环境位于同一账号、同一区域，使用同一份 release（1.0.0 在 `us-west-2` 执行；1.1.0 的全部功能用例在 `us-east-2` 执行，所用源码与 1.1.0 的运行时代码相同，见[发行说明](../release-notes.md#验收)）。浏览器用例使用 Chromium 148（Playwright 1.60.0）。
+2.0.0 使用 `us-west-2` 的两套新环境，确切候选和用于验证部署源码身份变化的同树提交见 [UAT 报告](v2.0.0-report.md)。两套环境位于同一账号、同一区域，使用同一份 release。历史版本（1.0.0 在 `us-west-2` 执行；1.1.0 的全部功能用例在 `us-east-2` 执行，所用源码与 1.1.0 的运行时代码相同，见[发行说明](../release-notes.md#验收)）。浏览器用例使用 Chromium 148（Playwright 1.60.0）。
 
 ## 3. 判定规则
 
@@ -47,7 +47,7 @@ UAT 只包含功能用例，**默认不执行性能测试**。性能与容量测
 | UAT-INS-05 | 全新环境端到端 | 在新空间注册数据集、构建运行环境、同步写、发布 SQL + Python 流水线 | 同步写提交，并能用 `after_write` 精确读回；流水线发布，结果与独立预期一致；缺少 scope、缺少 Bearer、接入 Key 写直接表都被拒绝 | B |
 | UAT-INS-06 | 破坏性升级 | 用 `./install.sh upgrade` 把环境升级到一个新的 release，再 `control.py rebuild`、`admission.py open` | 升级后全部组件运行新源码；旧写者取得终止回执后才批准新写者；重建后可以继续使用 | B |
 | UAT-INS-07 | 升级时旧工作被拒绝 | 保留一个运行中的计算尝试，然后升级并 `control.py rebuild` | 旧写者被确认停止，其身份被拒绝；旧候选迟到发布被拒绝；旧运行在新 generation 中不可见；重建后的同步写从序号 1 开始；数据与权限正确 | B |
-| UAT-INS-08 | 部署中途中断 | 在部署 control 时强制终止安装进程 | `admission.py open` 拒绝开放源码不一致的环境，写者保持停止 | B |
+| UAT-INS-08 | 部署中途中断 | 在部署 control 时强制终止安装进程，并核对已提交的 CloudFormation 操作到终态 | `admission.py open` 拒绝开放源码不一致的环境，写者保持停止 | B |
 | UAT-INS-09 | 同一 release 重新部署 | 对中断后的环境再次执行 `upgrade` | 没有变化的栈记为 no-op；全部组件运行同一源码并开放；数据完整，可以继续提交 | B |
 | UAT-INS-10 | 卸载 | `uninstall.py` | 三个栈都被删除；运行时 Lambda、任务定义和角色都被删除；账号级备份库保留 | B |
 

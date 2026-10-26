@@ -1,16 +1,94 @@
 # Colvenna Isle 发行说明与支持矩阵
 
-<a id="200-unreleased"></a>
-<a id="120-unreleased"></a>
-## 2.0.0（未发行）
+<a id="200"></a>
+## 2.0.0
 
-当前开发版本为 `2.0.0.dev0`；尚未创建发行 tag 或 Release。产品名为 **Colvenna Isle**，副标题为「S3 上的持久化分析数据库」/「Durable analytics databases on S3」，沿用 Colvenna 系列的 C 形流线标识。品牌来源见[品牌说明](assets/README.md)。
+发行版本为 `2.0.0`，tag 为 `v2.0.0`，见 [GitHub Release](https://github.com/colvenna/colvenna-isle/releases/tag/v2.0.0)。产品名为 **Colvenna Isle**，副标题为「S3 上的持久化分析数据库」/「Durable analytics databases on S3」，沿用 Colvenna 系列的 C 形流线标识。品牌来源见[品牌说明](assets/README.md)。
 
 本次是 **大版本破坏性迁移**（[#22](https://github.com/colvenna/colvenna-isle/issues/22)）：Python 导入改为 `colvenna_isle`，配置改为 `COLVENNA_*`，HTTP 头改为 `x-colvenna-*` / `X-Colvenna-*`，系统列改为 `_colvenna_*`，Airflow 使用 `ColvennaPipelineRunOperator`。旧名字不再作为别名接受。契约 revision 升到 2、生成文件在 `contracts/v2/`；公开 API 路由仍为 `/v1/`。原生空间格式升到 6，旧格式拒绝读写与备份。镜像内部路径改为 `/opt/colvenna`，固定上游二进制重新打包并更新存储镜像 digest。
 
 AWS 资源沿用 `colvenna-isle-*`。从已发布 1.x 升级必须先用旧版本导出完整 ODS 事件历史与 direct 业务行，并完成旧版本备份；再关闭、卸载旧运行时，全新安装新版本。ODS 的事件 ID、业务源版本与删除事件通过[离线迁移工具](design/identifier-migration.md#离线-ods-重放工具)验证后重放，系统列由新写者重建；direct 业务行通过同步写 API 导入；流水线与键状态重新发布并全量重建。不沿用旧回执、水位或发布 ID，不直接还原旧原生备份，不能原地仅改列名。完整方案与回退边界见[迁移设计](design/identifier-migration.md)和[安装手册](installation.md#10-破坏性升级)。
 
-本地服务、原生数据迁移、构建、示例和浏览器检查各自记录结果；AWS 安装、功能 UAT 与性能验收在实际执行前为 `NOT_RUN`。下文 1.1.0 / 1.0.0 为原样保留的已发布历史记录，其接口名与 PASS 不适用于当前候选。Colvenna 律师检索与商标申请为 `WAIVED_BY_REQUESTER_NOT_PASS`，请求者决定不作为发布门槛。
+本地服务、原生数据迁移、产品构建、示例和浏览器检查分别记录结果。当前功能手册实际定义 57 项用例；本版本按全部用例核对，历史文案中的 56 项计数不沿用。下文 1.1.0 / 1.0.0 为原样保留的已发布历史记录，其接口名与 PASS 不计入 2.0.0。2.0.0 性能为 `NOT_RUN`，历史基线没有重测，且性能结果不是发行门槛。Colvenna 律师检索与商标申请为 `WAIVED_BY_REQUESTER_NOT_PASS`，请求者决定不作为发布门槛。
+
+<a id="v2-acceptance"></a>
+## 2.0.0 验收与发行身份
+
+完整功能用例、源码与证据范围见 [2.0.0 UAT 报告](uat/v2.0.0-report.md)。在 `us-west-2` 的同一账号内使用两套全新环境；其他商业区域在配置上接受，但本版本未单独验收。性能未重测，不把历史实测值当作本版本结果。
+
+功能候选为 `172e2abc2d28dc0904f0e2e4d5aa0d47ef0139f6`。受控源码升级与中断重部署使用同一 Git tree 的独立提交，只改变部署源码身份。发行 tag 的运行时代码（`src/`、`infra/`、`runtime/`、`scripts/`、`install.sh`）必须与该功能候选逐文件相同；发行构建、源码/制品扫描、全新安装、实际 Lambda ZIP/镜像身份与 Quickstart 另按最终 tag 核对，结果附在 Release 的 `release-verification.md`。
+
+| 项目 | 身份 |
+| --- | --- |
+| 产品版本 / Git tag | `2.0.0` / `v2.0.0` |
+| Python 发行包 / 导入 | `colvenna-isle` / `colvenna_isle` |
+| 契约 / 原生格式 | revision 2 / format 6；API 路由 `/v1/` |
+| 源码 | tag 指向提交；Release 的 `release-manifest.json` 记录 commit / tree |
+| 构建 | `scripts/build_product.py`；五个组件 manifest、ZIP hash、镜像 ID 与锁定存储 digest |
+| 改名扫描 | 当前源码、源码归档、Python wheel、control/editor/builder ZIP 与实际 writer/query 镜像；例外只限精确历史材料 |
+| 迁移验证 | 已校验的历史形状 Parquet、精确类型、删除/迟到事件与稳定幂等键重放；不是生产 1.x 环境迁移声明 |
+
+## 支持矩阵
+
+| 维度 | 2.0.0 范围 |
+| --- | --- |
+| AWS 账号 | 单个账号；账号由 `AWS::AccountId` / `COLVENNA_ACCOUNT` 获取，不写入源码；功能验收只覆盖一个账号 |
+| 区域 | partition `aws` 的标准商业区域，按 `--region` / `COLVENNA_REGION` / `AWS_REGION` 指定；本版本验收区域为 `us-west-2`，其他区域 `NOT_RUN`；中国区、GovCloud 与隔离分区拒绝 |
+| 架构 | ARM64（Graviton），CPython 3.12 / linux_arm64 |
+| 原生运行栈 | DuckDB 1.5.6、duckdb-object-storage `f096ca1`、httpfs、aws；二进制 hash 见 [storage-lock.json](../runtime/storage-lock.json) |
+| 镜像依赖 | writer/query 的 pyarrow 24.0.0，hash 锁定；固定上游原生二进制在 `/opt/colvenna` 重新打包，不声称独立重编上游 |
+| 执行器 | writer_short、标准 Lambda、ECS Fargate Task；Managed Instances 与 Durable Functions 尚未实现 |
+| 浏览器 | Chromium / Playwright 1.60.0；其他浏览器未验证 |
+| 部署 | 每个环境独立栈；同版本备份只能在同一区域的另一环境隔离还原 |
+
+## 规格
+
+| 组件 | 规格 |
+| --- | --- |
+| 写者 | ECS Fargate，每个环境 1 个 Task，2 vCPU / 4 GiB / 21 GiB 工作盘；DuckDB `memory_limit` 512 MB、2 线程；每个进程最多同时打开 2 个数据库 |
+| 查询 | ECS Fargate Service，2 vCPU / 4 GiB / 21 GiB；每条查询在新进程、新原生实例中执行，不跨查询保留缓存 |
+| 同步写代理 | VPC Lambda，256 MB，28 秒 |
+| 接入 | Lambda，256 MB，60 秒；SQS FIFO |
+| API | API Gateway HTTP API，默认路由限流 10 rps，突发 20 |
+| 计算 profile | `writer_short` 30 秒；`*_lambda_standard` 900 秒；`*_ecs_medium` 1 vCPU / 4 GiB，最长 86,400 秒 |
+
+## 能力
+
+| 领域 | 能力 | 文档 |
+| --- | --- | --- |
+| 存储 | S3 上的原生 DuckDB 数据库、事务恢复、唯一写者与接管 | [AWS 产品设计](design/aws-product-design.md) |
+| 访问 | Bearer API Key、空间与 scope 授权、委派、轮换、吊销 | [用户手册](user-guide.md)、[API 合同](design/api-contract.md) |
+| 接入 | 不可变接入、ODS 幂等账本、接入状态、背压、DLQ 与受控重放 | [用户手册](user-guide.md) |
+| 同步写 | 直接写表的 insert / upsert / update / delete、原生约束、原回执与 UNKNOWN 核对 | [同步写](design/synchronous-writes.md) |
+| 查询 | 私网查询服务；current / published / 指定 release / after_write / after_ingestion 一致性 | [用户手册](user-guide.md) |
+| 流水线 | SQL / Python DAG、固定输入、增量 / 分区重算、调度、取消、重试、Airflow | [流水线设计](design/pipeline-design.md)、[Python 任务合同](design/python-task-contract.md) |
+| 控制台 | Query Editor、Admin Console | [用户手册](user-guide.md) |
+| 治理 | 审计与诊断、保留与回收、配额、公平调度、成本 | [用户手册](user-guide.md) |
+| 运维 | 安装、破坏性升级、开放 / 关闭、卸载；一致性备份与隔离还原；分段计时 | [安装部署手册](installation.md)、[性能报告](performance.md) |
+
+## 限制
+
+- **单一写者**：每个数据库只有一个写者。接入提交、同步写、导入和发布都在这个写者上排队，按公平调度交替执行。
+- **活动空间上限**：每个环境只有一个写者进程，它在进程生命周期内最多打开 2 个空间的数据库。第三个空间的写入、接入提交或流水线导入返回 `503 WRITER_DATABASE_LIMIT`，直到写者重启（`admission.py close` 后再 `open`）。需要更多活动空间时，请部署多个环境。
+- **外键与索引**：DuckDB 1.5.6 中，被外键引用的行，其索引列（显式索引、PRIMARY KEY、UNIQUE）和 LIST 列（`VARCHAR[]`）的值不能改变。这类更新以 `NATIVE_CONSTRAINT` 整批拒绝，其他列可以正常更新（见[同步写](design/synchronous-writes.md#2-注册权限与原生约束)）。
+- **请求上限**：
+  - API 请求体 1 MiB；
+  - 一次接入最多 10,000 条记录；
+  - 一次同步写最多 1,000 项，`timeout_ms` 最大 20,000；
+  - SQL 文本最多 64 KiB。
+- **查询**：
+  - 每次查询只暂存 SQL 引用的数据集，暂存上限 2,000,000 行，按被引用数据集的全部行计算（与 `WHERE` 无关），超出返回 `QUERY_STAGING_LIMIT`；
+  - 每个空间同时只执行 1 条查询，最多 8 条排队或执行中；整个环境最多 32 条排队、4 条同时执行；
+  - 结果最多 10,000 行，保留 10 分钟；
+  - `after_write` / `after_ingestion` 快照上限为全部引用数据集合计 100,000 行、2 MiB，复制预算 5 秒。复制前在同一读事务中检查行数及保守的 JSON 字节估算，超出返回 `QUERY_SOURCE_QUOTA`，不复制任何行。大表的分析查询仍建议用 `current`。
+- **查询结果保留配额**：整个环境最多保留 64 个结果（合计 64 MiB，每个空间 32 MiB），每个结果保留 10 分钟后回收。配额已满时，查询执行完会以 `429 QUERY_RESULT_RETENTION_QUOTA` 失败，所以持续查询吞吐约为每 10 分钟 64 个。
+- **流水线输入**：每个任务最多 16 个输入；每个输入最多 100,000 行，一次输入导出最多 32 MiB，超出时以 `PARQUET_ROWS_QUOTA` / `PARQUET_BYTES_QUOTA` 失败。
+- **备份**：备份在原生锁下导出全部表，期间写入需要等待；不支持跨产品版本还原。
+- **升级**：不提供向后兼容、旧数据自动迁移或零停机升级。升级时先关闭，再部署新版本；已发布的流水线版本需要重新发布（`PIPELINE_VERSION_BINDING_CHANGED`）。从 1.x 升级到 2.0.0 必须按上文导出、卸载、全新安装并重放业务数据；不能直接恢复旧格式备份。
+- **区域**：每个环境部署在一个区域；不提供跨区域复制、多区域读写或故障切换。
+- **写入高峰下的查询**：写入高峰期间或刚结束时，读取同一张表的分析查询会明显变慢，可能超过 30 秒的默认时限（`QUERY_TIMEOUT`）。这时应设置更长的 `timeout_ms`（最大 300,000），或者错开写入高峰。
+- **逐行执行**：同步写和长任务导入仍逐行执行语句；2.0.0 的吞吐和延迟未重测，历史测量保留在[性能报告](performance.md)。
+- **无服务目标**：没有约定的 SLA、RPO 或 RTO 目标。实测值只是上述规格下的基线，见[性能与容量基线](performance.md)。
 
 ## 1.1.0（已发布，历史）
 
