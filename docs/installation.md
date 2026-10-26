@@ -259,10 +259,13 @@ $COLVENNA /tmp/colvenna-build/bin/python scripts/aws/install.py fresh --release 
 
 control 与 writer 需要 environments 步骤输出的构建器配置。所以只要选了这两步，工具会自动带上 environments；构建器栈没有变化时，这一步是已确认的 no-op。
 
+同一账号、同一区域的环境共用备份库栈。初始化或更新备份库时应串行执行 vault 步骤；并发更新被 CloudFormation 拒绝时，先核对共享栈的原更新到终态，确认本次更新没有提交，再按本节续装。
+
 对同一 release 重新运行，结果是幂等的：
 
 - 制品以“源码 + SHA-256”为键，镜像使用不可变 tag，重复发布时先核对内容一致，再复用原版本；
 - 栈已运行完全相同的模板时，CloudFormation 的 “No updates are to be performed.” 记为已确认的 no-op（回执中 `NoUpdates: true`）；
+- 备份库已经记录本次源码时，vault 输出 `UNCHANGED`，不再提交栈更新；
 - 栈仍在 `UPDATE_IN_PROGRESS` 等其他状态时，照常失败。
 
 ## 7. 开通空间与首个管理员 Key
@@ -357,7 +360,7 @@ $COLVENNA /tmp/colvenna-build/bin/python scripts/aws/install.py upgrade --releas
 
   2. 核对计划无误后，加 `--execute` 执行删除。
 
-升级中途失败或被中断时，环境中会留下源码不一致的组件，`admission.py open` 会因此拒绝开放。对同一 release 重新运行 `upgrade` 即可（见 6.1）。
+升级中途失败或被中断时，环境中会留下源码不一致的组件，`admission.py open` 会因此拒绝开放。先核对已提交的原 CloudFormation 操作到终态，再对同一 release 重新运行 `upgrade`（见 6.1）。
 
 ## 11. 备份与隔离还原
 
