@@ -269,9 +269,20 @@ def ggshield_rules(binary):
 
 
 def excluded_history_paths(clone, excluded):
-    """The paths any commit of the clone touches that ggshield's default exclusions skip."""
-    paths = set(run([*GIT, "-C", str(clone), "log", "--all", "--format=", "--name-only"]).split("\n")) - {""}
+    """The paths any commit of the clone touches that ggshield's default exclusions skip (unquoted, so that a
+    non-ASCII path is matched as ggshield sees it)."""
+    listing = run([*GIT, "-C", str(clone), "-c", "core.quotePath=false", "log", "-z", "--all", "--format=",
+                   "--name-only"])
+    paths = {path.strip("\n") for path in listing.split("\0")} - {""}
     return sorted(path for path in paths if excluded(path))
+
+
+def check_output(out, excluded):
+    """Refuse an output directory under a path ggshield's default exclusions match: its path scans match them
+    against the absolute path, so every file there would be dropped without notice."""
+    if excluded(Path(out) / "probe" / "file.txt"):
+        sys.exit(f"{out} is under a path ggshield's default exclusions skip (such as vendor/ or .venv/): "
+                 "choose another output directory")
 
 
 def slug(scope):
@@ -395,6 +406,7 @@ def main(argv=None):
         sys.exit(f"the scan needs ggshield {want}, installed from runtime/ggshield-requirements.lock (found: {have})")
     skip_extensions, excluded = ggshield_rules(args.ggshield)
     out = args.output.resolve()  # ggshield reports the paths it was given; file_line() maps absolute ones
+    check_output(out, excluded)
     out.mkdir(mode=0o700, parents=True)
     header = [f"date: {datetime.datetime.now(datetime.timezone.utc):%Y-%m-%dT%H:%M:%SZ}",
               f"repository: {args.repository}", f"ggshield: {have}", f"quota before: {quota(args.ggshield)}"]

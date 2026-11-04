@@ -254,6 +254,30 @@ class SummarizeTest(unittest.TestCase):
         self.assertTrue(text.rstrip().endswith("VERDICT: FINDINGS"))
 
 
+class ExclusionTest(unittest.TestCase):
+    def test_history_paths_are_matched_unquoted_even_when_not_ascii(self):
+        with tempfile.TemporaryDirectory() as work:
+            git = ["git", "-C", work, "-c", "user.name=test", "-c", "user.email=test@example.com"]
+            subprocess.run(["git", "init", "--quiet", work], check=True)
+            for path in ("vendor/\u4e2d\u6587.py", "src/app.py"):
+                Path(work, path).parent.mkdir(exist_ok=True)
+                Path(work, path).write_text("x = 1\n")
+            subprocess.run([*git, "add", "."], check=True)
+            subprocess.run([*git, "commit", "--quiet", "-m", "files"], check=True)
+
+            found = ggshield_scan.excluded_history_paths(work, lambda path: path.startswith("vendor/"))
+
+            self.assertEqual(found, ["vendor/\u4e2d\u6587.py"])
+
+    def test_an_output_directory_that_ggshield_would_exclude_is_refused(self):
+        excluded = lambda path: "/vendor/" in str(path)  # noqa: E731
+
+        with self.assertRaises(SystemExit) as refused:
+            ggshield_scan.check_output(Path("/tmp/vendor/scan"), excluded)
+        self.assertIn("default exclusions", str(refused.exception))
+        ggshield_scan.check_output(Path("/tmp/private/scan"), excluded)
+
+
 class HookTest(unittest.TestCase):
     """The pre-commit hook runs ggshield only at the version runtime/ggshield-requirements.lock pins."""
 

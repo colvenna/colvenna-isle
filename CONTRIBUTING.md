@@ -71,7 +71,7 @@ export PATH="$HOME/.venvs/colvenna-ggshield/bin:$PATH" GITGUARDIAN_API_KEY=...  
   The reports in `--output` contain the matched values, so keep that directory private. The summary has no values; it records the date, the scanned commit, the ggshield version, the quota and each finding's location.
 - **Each commit and each push (best effort):** `pre-commit install` enables the [ggshield hooks](.pre-commit-config.yaml). They use the `ggshield` on `PATH` and refuse any version other than the one in the lock file.
   - The pre-commit hook scans the staged changes.
-  - The pre-push hook scans the commits about to be published. It covers at most `max_commits_for_hook` commits of a push (1000, set in `.gitguardian.yaml`), and ggshield lets a push through with only a warning when it cannot work out the commit range.
+  - The pre-push hook scans the commits about to be published. It covers at most `max_commits_for_hook` commits of a push (1000, set in `.gitguardian.yaml`), and ggshield lets a push through with only a warning when it cannot work out the commit range. When one push updates several refs (`git push --all`, or several branches or tags), pre-commit hands ggshield only the first, so push them one at a time.
   - Without an API key, they stop with ggshield's error.
   - `SKIP=ggshield,ggshield-push` or `git push --no-verify` skips them. The CI job and the publication scan still apply.
 - **Each push and pull request:** the [secret scan workflow](.github/workflows/ggshield.yml) scans the new commits with the `GITGUARDIAN_API_KEY` Actions secret, which the repository owner sets. A manual run scans the whole history.
@@ -81,19 +81,21 @@ export PATH="$HOME/.venvs/colvenna-ggshield/bin:$PATH" GITGUARDIAN_API_KEY=...  
   - Any other finding (a test value, a public example, a false positive) is added to `.gitguardian.yaml` by its ignore SHA, with a name that gives the file and the reason. The addition is reviewed in its pull request.
   - No path or detector is ignored.
   - A tracked file's name should avoid credential words such as "secret", "token" or "password". The development artifact's `manifest.json` pairs each tracked path with its SHA-256, and ggshield reported such a pair as a secret. An ignore entry would be needed again each time the file changed, so rename the file instead (#25).
-- **Deployment values:** ggshield does not look for AWS account IDs, ARNs or internal addresses, so a maintainer also searches what the scan fetched:
+- **Deployment values:** ggshield does not look for AWS account IDs, ARNs, endpoints or internal addresses, so a maintainer also searches what the scan fetched:
   - Each account that a deployment of yours used must appear 0 times anywhere.
-  - In the first-party content (the histories, the release assets and the GitHub text), list the accounts named in ARNs and the private IPv4 addresses, and review each one.
-  - The workflow artifacts also bundle third-party packages, which name documentation and AWS-owned accounts, so only your account is searched there.
+  - In the first-party content, list the accounts named in ARNs, the AWS endpoint hosts and the private IPv4 addresses, and review each one. The first-party content is the histories, the release assets, the GitHub text, and the project's own logs, manifests and documents inside the workflow artifacts.
+  - The rest of the workflow artifacts bundle third-party packages, which name documentation and AWS-owned accounts and endpoints, so only your account is searched there.
 
-  Expected hits are documentation examples (such as `123456789012`), accounts that AWS owns (such as a service's image registry), and example addresses (such as a VPC CIDR).
+  Expected hits are documentation examples (such as `123456789012` and `example.com`), accounts and endpoints that AWS owns (such as a service's image registry), and example addresses (such as a VPC CIDR):
 
   ```bash
   ACCOUNT=<your deployment account ID>; DIR=<private directory>
-  histories() { for git in "$DIR"/mirror.git "$DIR"/wiki.git; do [ -d "$git" ] && git -C "$git" log --all -p; done; }
-  first_party() { histories; grep -rhI '' "$DIR/unpacked/release-assets" "$DIR/unpacked/GitHub-text"; }
+  histories() { for git in "$DIR"/mirror.git "$DIR"/wiki.git; do if [ -d "$git" ]; then git -C "$git" log --all -p; fi; done; }
+  first_party() { histories; grep -rhI '' "$DIR/unpacked/release-assets" "$DIR/unpacked/GitHub-text"
+                  grep -rhI '' --include='*.log' --include='manifest.json' --include='*.md' "$DIR/unpacked/workflow-artifacts"; }
   { first_party; grep -rhI '' "$DIR/unpacked/workflow-artifacts"; } | grep -c "$ACCOUNT"  # must be 0
   first_party | grep -oE 'arn:aws[a-z-]*:[a-z0-9-]*:[a-z0-9-]*:[0-9]{12}:' | grep -oE '[0-9]{12}' | sort | uniq -c
+  first_party | grep -oE '[a-z0-9.-]+\.(amazonaws\.com|cloudfront\.net|awsapps\.com)' | sort | uniq -c
   first_party | grep -oE '\b(10\.[0-9]+|172\.(1[6-9]|2[0-9]|3[01])|192\.168)\.[0-9]+\.[0-9]+\b' | sort | uniq -c
   ```
 
