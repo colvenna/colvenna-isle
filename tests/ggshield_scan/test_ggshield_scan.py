@@ -2,6 +2,9 @@
 
 import gzip
 import io
+import os
+import re
+import subprocess
 import sys
 import tarfile
 import tempfile
@@ -96,6 +99,39 @@ class UnpackTest(unittest.TestCase):
             self.assertTrue(any(marker.encode() in part for part in parts))
             self.assertGreater(len(parts), 2)
             self.assertEqual(result.files, 2)
+
+
+    def test_text_under_an_extension_ggshield_drops_is_renamed_and_real_binaries_are_counted(self):
+        with tempfile.TemporaryDirectory() as work:
+            Path(work, "logo.svg").write_bytes(b"<svg><!-- token: abc --></svg>\n")
+            Path(work, "photo.png").write_bytes(bytes(range(256)))
+            Path(work, "broken.gz").write_bytes(b"\x1f\x8b\x08\x00" + bytes(range(256)))
+            Path(work, "broken.zip").write_bytes(b"PK\x03\x04" + bytes(range(256)))
+            out = Path(work, "unpacked")
+
+            result = ggshield_scan.unpack([Path(work)], out, skip_extensions={"svg", "png", "gz", "zip"})
+
+            names = sorted(path.name for path in out.rglob("*") if path.is_file())
+            self.assertEqual(names, ["broken.gz", "broken.zip", "logo.svg.txt", "photo.png"])
+            self.assertEqual(result.files, 4)
+            self.assertEqual(result.unread, 3)
+
+    def test_each_part_records_the_line_it_starts_at(self):
+        text = "".join(f"line {number}\n" for number in range(1, 41)).encode()
+        with tempfile.TemporaryDirectory() as work:
+            Path(work, "big.json").write_bytes(text)
+            out = Path(work, "unpacked")
+
+            ggshield_scan.unpack([Path(work, "big.json")], out, part_chars=100, overlap_chars=20)
+
+            original = text.decode().splitlines()
+            stored = sorted(out.rglob("big.json"))
+            self.assertGreater(len(stored), 2)
+            for part in stored:
+                place, first = ggshield_scan.file_line(part, 1)
+                self.assertTrue(original[first - 1].endswith(part.read_text().splitlines()[0]), part)
+                self.assertEqual(ggshield_scan.file_line(part, 3)[1], first + 2)
+                self.assertTrue(place.endswith("/big.json"), place)
 
 
 class ForcePushedHeadsTest(unittest.TestCase):
@@ -195,6 +231,35 @@ class SummarizeTest(unittest.TestCase):
         self.assertFalse(clean)
         self.assertIn("history: ggshield exited 128", text)
         self.assertTrue(text.rstrip().endswith("VERDICT: FINDINGS"))
+
+
+class HookTest(unittest.TestCase):
+    """The pre-commit hook runs ggshield only at the version runtime/ggshield-requirements.lock pins."""
+
+    def run_hook(self, version, *args):
+        with tempfile.TemporaryDirectory() as work:
+            fake = Path(work, "ggshield")
+            fake.write_text("#!/bin/sh\n"
+                            f'if [ "$1" = --version ]; then echo "ggshield, version {version}"; exit 0; fi\n'
+                            'echo "ran: $*"; exit 3\n')
+            fake.chmod(0o755)
+            return subprocess.run([sys.executable, str(ROOT / "scripts/ggshield_hook.py"), *args], capture_output=True,
+                                  text=True, env={**os.environ, "PATH": f"{work}:/usr/bin:/bin"})
+
+    def test_the_pinned_version_scans_the_staged_changes_or_the_pushed_commits(self):
+        pinned = re.search(r"^ggshield==(\S+) ", (ROOT / "runtime/ggshield-requirements.lock").read_text(), re.M)[1]
+
+        for mode in ("pre-commit", "pre-push"):
+            done = self.run_hook(pinned, mode)
+
+            self.assertEqual((done.returncode, done.stdout), (3, f"ran: secret scan {mode}\n"))
+
+    def test_another_version_is_refused_with_the_reason(self):
+        done = self.run_hook("0.0.1", "pre-commit")
+
+        self.assertEqual(done.returncode, 1)
+        self.assertIn("needs ggshield", done.stderr)
+        self.assertIn("found: 0.0.1", done.stderr)
 
 
 if __name__ == "__main__":

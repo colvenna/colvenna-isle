@@ -9,7 +9,7 @@ branch (main by default):
   - release assets and workflow artifacts as published, and any local --path, each archive opened
     recursively (zip, wheel, jar, tar, gzip) and each distinct file scanned once;
   - GitHub text: issues and pull requests with their comments, reviews and review comments, release notes
-    and commit comments.
+    and commit comments; and the wiki, when it is enabled.
 Reports with matched values stay in --output (keep it private); the summary holds none. Exit 0 only when
 every scan is complete and finds 0 incidents.
 
@@ -29,8 +29,11 @@ import subprocess
 import sys
 import tarfile
 import zipfile
+import zlib
 from dataclasses import dataclass
 from pathlib import Path
+
+from ggshield_hook import installed_version, pinned_version
 
 ZIP_SUFFIXES = (".zip", ".whl", ".jar")
 TAR_SUFFIXES = (".tar", ".tar.gz", ".tgz")
@@ -46,48 +49,67 @@ OVERLAP_CHARS = 4_096
 class Unpacked:
     files: int = 0
     distinct: int = 0
+    unread: int = 0  # binary files under an extension ggshield's path scan drops without reading
 
 
-def unpack(sources, out, part_chars=PART_CHARS, overlap_chars=OVERLAP_CHARS):
+ARCHIVE_ERRORS = (OSError, EOFError, zlib.error, zipfile.BadZipFile, tarfile.TarError)
+
+
+def unpack(sources, out, part_chars=PART_CHARS, overlap_chars=OVERLAP_CHARS, skip_extensions=frozenset()):
     """Open each source and every archive nested in it (zip, wheel, jar, tar, gzip); store each distinct file
-    content once under out, a UTF-8 text longer than part_chars as overlapping parts."""
+    content once under out. A UTF-8 text longer than part_chars is stored as overlapping parts, each in a
+    folder that records its number and the line it starts in. ggshield's path scan drops files by extension (skip_extensions)
+    without reading them, so a UTF-8 text under such an extension gets ".txt" appended, and a binary one is
+    counted as unread. A damaged archive is stored as a file."""
     out = Path(out)
     out.mkdir(parents=True, exist_ok=True)
     result = Unpacked()
     seen = set()
 
-    def visit(name, data, depth):
-        if depth < MAX_DEPTH and name.lower().endswith(ZIP_SUFFIXES) and zipfile.is_zipfile(io.BytesIO(data)):
-            with zipfile.ZipFile(io.BytesIO(data)) as archive:
-                for member in archive.infolist():
-                    if not member.is_dir():
-                        visit(member.filename, archive.read(member), depth + 1)
-            return
-        if depth < MAX_DEPTH and name.lower().endswith(TAR_SUFFIXES):
-            try:
+    def opened(name, data, depth):
+        lower = name.lower()
+        if depth >= MAX_DEPTH:
+            return False
+        try:
+            if lower.endswith(ZIP_SUFFIXES) and zipfile.is_zipfile(io.BytesIO(data)):
+                with zipfile.ZipFile(io.BytesIO(data)) as archive:
+                    members = [(m.filename, archive.read(m)) for m in archive.infolist() if not m.is_dir()]
+            elif lower.endswith(TAR_SUFFIXES):
                 with tarfile.open(fileobj=io.BytesIO(data)) as archive:
-                    for member in archive.getmembers():
-                        if member.isfile():
-                            visit(member.name, archive.extractfile(member).read(), depth + 1)
-                return
-            except tarfile.TarError:
-                pass
-        if depth < MAX_DEPTH and name.lower().endswith(".gz"):
-            try:
-                visit(name[:-3], gzip.decompress(data), depth + 1)
-                return
-            except (OSError, EOFError):
-                pass
+                    members = [(m.name, archive.extractfile(m).read()) for m in archive.getmembers() if m.isfile()]
+            elif lower.endswith(".gz"):
+                members = [(name[:-3], gzip.decompress(data))]
+            else:
+                return False
+        except ARCHIVE_ERRORS:
+            return False
+        for member, content in members:
+            visit(member, content, depth + 1)
+        return True
+
+    def visit(name, data, depth):
+        if opened(name, data, depth):
+            return
         result.files += 1
         digest = hashlib.sha256(data).hexdigest()
         if digest in seen:
             return
         seen.add(digest)
         result.distinct += 1
-        for index, part in enumerate(parts(data, part_chars, overlap_chars)):
-            folder = out / (digest[:16] if index == 0 else f"{digest[:16]}.{index}")
+        try:
+            text = data.decode("utf-8")
+        except UnicodeDecodeError:
+            text = None
+        name = Path(name).name or "file"
+        if Path(name).suffix.lower()[1:] in skip_extensions:
+            if text is None:
+                result.unread += 1
+            else:
+                name += ".txt"
+        for index, (first_line, part) in enumerate(parts(data, text, part_chars, overlap_chars)):
+            folder = out / (digest[:16] if index == 0 else f"{digest[:16]}.{index}.L{first_line}")
             folder.mkdir()
-            (folder / Path(name).name).write_bytes(part)
+            (folder / name).write_bytes(part)
 
     for source in map(Path, sources):
         for path in sorted(source.rglob("*")) if source.is_dir() else [source]:
@@ -96,18 +118,21 @@ def unpack(sources, out, part_chars=PART_CHARS, overlap_chars=OVERLAP_CHARS):
     return result
 
 
-def parts(data, part_chars, overlap_chars):
-    """data itself, or a UTF-8 text longer than part_chars as windows that overlap by overlap_chars."""
-    if len(data) <= part_chars:
-        return [data]
-    try:
-        text = data.decode("utf-8")
-    except UnicodeDecodeError:
-        return [data]
-    if len(text) <= part_chars:
-        return [data]
+def parts(data, text, part_chars, overlap_chars):
+    """(first line, bytes) of data itself, or of windows of a UTF-8 text longer than part_chars that overlap
+    by overlap_chars."""
+    if text is None or len(text) <= part_chars:
+        return [(1, data)]
     step = part_chars - overlap_chars
-    return [text[start:start + part_chars].encode() for start in range(0, len(text) - overlap_chars, step)]
+    starts = range(0, len(text) - overlap_chars, step)
+    return [(text.count("\n", 0, start) + 1, text[start:start + part_chars].encode()) for start in starts]
+
+
+def file_line(path, line):
+    """The stored file's place in its original: the content's folder and name, and the line there."""
+    path = Path(path)
+    digest, _, first = path.parent.name.partition(".L")
+    return f"{digest}/{path.name}", line + int(first or 1) - 1
 
 
 def force_pushed_heads(pages):
@@ -147,9 +172,33 @@ def has_errors(report):
     return bool(report.get("errors")) or any(has_errors(inner) for inner in report.get("scans") or [])
 
 
-def located(filename):
-    path = Path(filename)
-    return Path(*path.parts[-2:]) if path.is_absolute() else path
+def located(filename, line):
+    """A finding's file and line: as in the repository for a commit, else as file_line places it."""
+    return (filename, line) if not Path(filename).is_absolute() else file_line(filename, line)
+
+
+def problems(scan):
+    """Why a scan is not complete: ggshield failed, reported errors, or skipped a file that is not binary."""
+    if scan.returncode not in (0, 1) or "total_incidents" not in scan.report:
+        return [f"{scan.scope}: ggshield exited {scan.returncode}"]
+    found = []
+    if has_errors(scan.report) or "Scanning failed" in scan.stderr:
+        found.append(f"{scan.scope}: incomplete, ggshield reported a failed scan (see its report)")
+    found += [f"  - not scanned: {file_line(filename, 1)[0]} ({reason})"
+              for filename, reason in skipped(scan.stderr) if reason != BINARY_SKIP]
+    return found
+
+
+def findings(scan):
+    """Each incident's detector, commit (for a history), file, line and ignore SHA; never its value."""
+    commits = scan.report.get("scans")
+    for commit in commits if commits is not None else [scan.report]:
+        where = f"commit {commit['id'][:12]}, " if commits is not None else ""
+        for entity in commit.get("entities_with_incidents") or []:
+            for found in entity["incidents"]:
+                line = found["occurrences"][0]["line_start"] if found["occurrences"] else 1
+                place, line = located(entity["filename"], line)
+                yield f"{found['type']}, {where}{place}:{line}, ignore_sha {found['ignore_sha']}"
 
 
 def summarize(scans):
@@ -159,31 +208,14 @@ def summarize(scans):
     nothing but binary files (which it cannot decode)."""
     lines, clean = [], True
     for scan in scans:
-        if scan.returncode not in (0, 1) or "total_incidents" not in scan.report:
-            lines.append(f"{scan.scope}: ggshield exited {scan.returncode}")
-            clean = False
-            continue
-        if has_errors(scan.report) or "Scanning failed" in scan.stderr:
-            lines.append(f"{scan.scope}: incomplete, ggshield reported a failed scan (see its report)")
-            clean = False
-        total = scan.report["total_incidents"]
-        skips = list(skipped(scan.stderr))
-        binary = sum(reason == BINARY_SKIP for _, reason in skips)
-        lines.append(f"{scan.scope}: {total} incidents"
-                     + (f"; {binary} binary files not scanned ({BINARY_SKIP})" if binary else ""))
-        clean = clean and scan.returncode == 0 and total == 0
-        for filename, reason in skips:
-            if reason != BINARY_SKIP:
-                lines.append(f"  - not scanned: {located(filename)} ({reason})")
-                clean = False
-        commits = scan.report.get("scans")
-        for commit in commits if commits is not None else [scan.report]:
-            where = f"commit {commit['id'][:12]}, " if commits is not None else ""
-            for entity in commit.get("entities_with_incidents") or []:
-                for found in entity["incidents"]:
-                    line = found["occurrences"][0]["line_start"] if found["occurrences"] else "?"
-                    lines.append(f"  - {found['type']}, {where}{located(entity['filename'])}:{line}, "
-                                 f"ignore_sha {found['ignore_sha']}")
+        trouble = problems(scan)
+        if "total_incidents" in scan.report:
+            binary = sum(reason == BINARY_SKIP for _, reason in skipped(scan.stderr))
+            lines.append(f"{scan.scope}: {scan.report['total_incidents']} incidents"
+                         + (f"; {binary} binary files not scanned ({BINARY_SKIP})" if binary else ""))
+            clean = clean and scan.returncode == 0 and scan.report["total_incidents"] == 0
+        lines += trouble + [f"  - {item}" for item in findings(scan)]
+        clean = clean and not trouble
     lines.append("VERDICT: CLEAN" if clean else "VERDICT: FINDINGS")
     return "\n".join(lines) + "\n", clean
 
@@ -201,11 +233,23 @@ ANONYMOUS_GIT = {**os.environ, "GIT_TERMINAL_PROMPT": "0"}  # never prompt; no c
 GIT = ["git", "-c", "credential.helper="]
 
 
-def run(command, **options):
+def run(command, failure=None, **options):
+    """The command's output; on failure, exit with failure (or the command and its stderr)."""
     done = subprocess.run(command, capture_output=True, text=True, **options)
     if done.returncode:
-        sys.exit(f"{' '.join(command[:4])} ... failed ({done.returncode}): {done.stderr.strip()}")
+        sys.exit(failure or f"{' '.join(command[:4])} ... failed ({done.returncode}): {done.stderr.strip()}")
     return done.stdout
+
+
+def ggshield_extensions(binary):
+    """The extensions ggshield's path scan drops unread, from the Python of ggshield's environment."""
+    folder = Path(shutil.which(binary) or binary).parent
+    code = "from ggshield.utils._binary_extensions import BINARY_EXTENSIONS as B; print(' '.join(sorted(B)))"
+    for python in (folder / "python3", folder / "python"):
+        done = subprocess.run([str(python), "-c", code], capture_output=True, text=True) if python.exists() else None
+        if done and done.returncode == 0:
+            return set(done.stdout.split())
+    sys.exit(f"cannot read the extensions ggshield drops: no Python beside {binary} imports ggshield")
 
 
 def slug(scope):
@@ -324,31 +368,36 @@ def main(argv=None):
     parser.add_argument("--ggshield", default=shutil.which("ggshield") or "ggshield")
     args = parser.parse_args(argv)
 
+    want, have = pinned_version(), installed_version(args.ggshield)
+    if have != want:  # the completeness checks read this version's messages
+        sys.exit(f"the scan needs ggshield {want}, installed from runtime/ggshield-requirements.lock (found: {have})")
+    skip_extensions = ggshield_extensions(args.ggshield)
     out = args.output
     out.mkdir(mode=0o700, parents=True)
     header = [f"date: {datetime.datetime.now(datetime.timezone.utc):%Y-%m-%dT%H:%M:%SZ}",
-              f"repository: {args.repository}", f"ggshield: {run([args.ggshield, '--version']).strip()}",
-              f"quota before: {quota(args.ggshield)}"]
+              f"repository: {args.repository}", f"ggshield: {have}", f"quota before: {quota(args.ggshield)}"]
 
     clone = out / "mirror.git"
     mirror(args.repository, clone)
     pushed = fetch_force_pushed(args.repository, clone)
     header.append(f"refs: {describe_refs(clone)}; force-pushed heads: "
                   + ", ".join(f"{number} {outcome}" for outcome, number in pushed.items()))
-    found = subprocess.run([*GIT, "-C", str(clone), "rev-parse", "--verify", f"refs/heads/{args.branch}"],
-                           capture_output=True, text=True)
-    if found.returncode:
-        sys.exit(f"the repository has no branch {args.branch}")
-    branch_sha = found.stdout.strip()
+    branch_sha = run([*GIT, "-C", str(clone), "rev-parse", "--verify", f"refs/heads/{args.branch}"],
+                     failure=f"the repository has no branch {args.branch}").strip()
     config = out / "gitguardian.yaml"
-    shown = subprocess.run([*GIT, "-C", str(clone), "show", f"{branch_sha}:.gitguardian.yaml"],
-                           capture_output=True, text=True)
-    if shown.returncode:
-        sys.exit(f"{args.branch} has no .gitguardian.yaml: the scan uses the repository's own configuration")
-    config.write_text(shown.stdout)
+    config.write_text(run([*GIT, "-C", str(clone), "show", f"{branch_sha}:.gitguardian.yaml"],
+                          failure=f"{args.branch} has no .gitguardian.yaml: the scan uses the repository's own "
+                                  "configuration"))
     header.append(f"configuration: .gitguardian.yaml of {args.branch} {branch_sha}")
 
     scans = [ggshield(args.ggshield, config, out, "history", "repo", str(clone))]
+    if json.loads(run(["gh", "api", f"repos/{args.repository}"]))["has_wiki"]:
+        wiki = out / "wiki.git"
+        run([*GIT, "clone", "--quiet", "--mirror", f"https://github.com/{args.repository}.wiki.git", str(wiki)],
+            failure="the wiki is enabled but has no clone to scan: disable it, or add a page and scan again",
+            env=ANONYMOUS_GIT)
+        header.append(f"wiki: {describe_refs(wiki)}")
+        scans.append(ggshield(args.ggshield, config, out, "wiki", "repo", str(wiki)))
     download_releases(args.repository, out / "releases")
     download_workflow_artifacts(args.repository, out / "workflow-artifacts")
     texts = download_github_text(args.repository, out / "github-text")
@@ -356,9 +405,10 @@ def main(argv=None):
               ("GitHub text", [out / "github-text"])] + ([("paths", args.path)] if args.path else [])
     for scope, sources in groups:
         unpacked = out / "unpacked" / slug(scope)
-        stats = unpack(sources, unpacked)
+        stats = unpack(sources, unpacked, skip_extensions=skip_extensions)
         header.append(f"{scope}: {stats.files} files, {stats.distinct} distinct contents scanned"
-                      + (f" ({texts} documents)" if scope == "GitHub text" else ""))
+                      + (f" ({texts} documents)" if scope == "GitHub text" else "")
+                      + (f"; {stats.unread} binary files ggshield drops by extension" if stats.unread else ""))
         if stats.files:
             scans.append(ggshield(args.ggshield, config, out, scope, "path", "--recursive", "--yes", str(unpacked)))
 

@@ -28,8 +28,9 @@ jobs:
           GITGUARDIAN_API_KEY: ${{ secrets.GITGUARDIAN_API_KEY }}
           FROM_FORK: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
           # ggshield's commit range: a pull request's base branch, else the commits of the push
-          # (GITHUB_PUSH_BASE_SHA), else everything not on the default branch. The push's base is
-          # dropped below when the checkout lacks it: a new branch (all zeros) or a force push.
+          # (GITHUB_PUSH_BASE_SHA), else everything not on the default branch. After a force push the
+          # checkout lacks the replaced commit, which GitHub still serves by SHA: it is fetched, so only
+          # the new commits are scanned. A new branch (all zeros) falls back to the default branch.
           GITHUB_PUSH_BASE_SHA: ${{ github.event.before }}
           GITHUB_DEFAULT_BRANCH: origin/${{ github.event.repository.default_branch }}
           EVENT: ${{ github.event_name }}
@@ -42,7 +43,8 @@ jobs:
             echo "::error::The GITGUARDIAN_API_KEY Actions secret is not set (CONTRIBUTING.md#secret-scanning)."
             exit 1
           fi
-          if [ -n "$GITHUB_PUSH_BASE_SHA" ] && ! git cat-file -e "$GITHUB_PUSH_BASE_SHA^{commit}" 2>/dev/null; then
+          if [ -n "$GITHUB_PUSH_BASE_SHA" ] && ! git cat-file -e "$GITHUB_PUSH_BASE_SHA^{commit}" 2>/dev/null \
+            && ! git fetch --quiet --no-tags origin "$GITHUB_PUSH_BASE_SHA" 2>/dev/null; then
             unset GITHUB_PUSH_BASE_SHA
           fi
           if [ "$EVENT" = workflow_dispatch ]; then
