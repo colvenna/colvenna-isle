@@ -75,6 +75,7 @@ export PATH="$HOME/.venvs/colvenna-ggshield/bin:$PATH" GITGUARDIAN_API_KEY=...  
   - Without an API key, they stop with ggshield's error.
   - `SKIP=ggshield,ggshield-push` or `git push --no-verify` skips them. The CI job and the publication scan still apply.
 - **Each push and pull request:** the [secret scan workflow](.github/workflows/ggshield.yml) scans the new commits with the `GITGUARDIAN_API_KEY` Actions secret, which the repository owner sets. A manual run scans the whole history.
+  - A ruleset on `main` requires a pull request that passes this check and the build and documentation checks, on a branch up to date with `main`. It also blocks force pushes and deletion.
   - Pull requests from forks get no secrets, so for them the job only notes this. A maintainer scans such a change before merging it.
 - **A finding:**
   - A real credential is revoked or rotated first, then the history is reviewed. It is never ignored.
