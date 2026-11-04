@@ -10,6 +10,8 @@
 # reported. Add an entry only for a value checked by hand and reviewed in its pull request
 # (CONTRIBUTING.md#secret-scanning); a real credential is revoked or rotated, never ignored.
 version: 2
+# The pre-push hook scans at most this many commits of a push (ggshield's default is 50).
+max_commits_for_hook: 1000
 secret:
   ignored_matches:
     - name: "an example password of the AWS API documentation that botocore 1.42.89 ships, identical to its PyPI wheel; in control.zip (Generic Password; botocore/data/iam/2010-05-08/examples-1.json, line 1155)"

@@ -4,23 +4,12 @@ commits about to be pushed (in a public repository a push publishes them). Eithe
 PATH only at the version runtime/ggshield-requirements.lock pins (CONTRIBUTING.md#secret-scanning)."""
 
 import os
-import re
 import shutil
-import subprocess
 import sys
-from pathlib import Path
 
-LOCK = Path(__file__).resolve().parents[1] / "runtime/ggshield-requirements.lock"
+from ggshield_pin import installed_version, pinned_version
+
 MODES = ("pre-commit", "pre-push")
-
-
-def pinned_version():
-    return re.search(r"^ggshield==(\S+) ", LOCK.read_text(), re.M)[1]
-
-
-def installed_version(binary):
-    done = subprocess.run([binary, "--version"], capture_output=True, text=True) if binary else None
-    return (done.stdout.strip().rpartition(" ")[2] if done and done.returncode == 0 else "") or "none"
 
 
 def main():

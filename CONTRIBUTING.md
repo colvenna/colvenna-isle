@@ -39,7 +39,7 @@ The native suites (DuckDB 1.5.6 with the object-storage extension) run inside th
 
 ## Secret scanning
 
-Nothing is made public before [ggshield](https://docs.gitguardian.com/ggshield-docs/getting-started), GitGuardian's command-line scanner, finds 0 incidents in it with this repository's [`.gitguardian.yaml`](.gitguardian.yaml). This holds for the repository's history, its published artifacts and its GitHub text. The repository is public, so a push publishes its commits; the local pre-push hook is therefore the check before publication, and CI checks each push again afterwards. ggshield is installed from a hash-locked file:
+Nothing is made public before [ggshield](https://docs.gitguardian.com/ggshield-docs/getting-started), GitGuardian's command-line scanner, finds 0 incidents in it with this repository's [`.gitguardian.yaml`](.gitguardian.yaml). This holds for the repository's history, its published artifacts and its GitHub text. The repository is public, so a push publishes its commits. The local hooks below are a best-effort check before that, and CI scans each push again afterwards. The publication scan is the gate for a release and for making anything public. ggshield is installed from a hash-locked file:
 
 ```bash
 python3 -m venv ~/.venvs/colvenna-ggshield
@@ -61,31 +61,40 @@ export PATH="$HOME/.venvs/colvenna-ggshield/bin:$PATH" GITGUARDIAN_API_KEY=...  
 
   It uses the `.gitguardian.yaml` of `main`; `--branch` selects another branch. It refuses any ggshield version other than the one in the lock file, because its checks read that version's messages.
 
-  Two kinds of file are prepared first. A text over ggshield's 1 MiB limit is scanned in overlapping parts. ggshield drops files by extension (for example `.svg` and `.pdf`), so a text under such an extension is scanned under a `.txt` name.
+  Some files would be left out by ggshield without notice, so they are prepared first:
+  - A text over ggshield's 1 MiB limit is scanned in overlapping parts.
+  - ggshield drops files by extension (for example `.svg` and `.pdf`), so a text under such an extension is scanned under a `.txt` name.
+  - ggshield's default exclusions (for example `vendor/`, `node_modules/`, `.venv/`, `*.mdx` and `*.sops`) apply to every scan, and its `--ignore-default-excludes` has no effect in 1.56.1. Unpacked files that they match are scanned under a neutral name. Any path in the history that they match makes the scan fail.
 
   It exits 0 only when every scan is complete and finds 0 incidents. The summary counts the binary files that ggshield cannot decode or drops by extension. Any other file that ggshield skips makes the scan fail.
 
   The reports in `--output` contain the matched values, so keep that directory private. The summary has no values; it records the date, the scanned commit, the ggshield version, the quota and each finding's location.
-- **Each commit and each push:** `pre-commit install` enables the [ggshield hooks](.pre-commit-config.yaml). They use the `ggshield` on `PATH` and refuse any version other than the one in the lock file.
+- **Each commit and each push (best effort):** `pre-commit install` enables the [ggshield hooks](.pre-commit-config.yaml). They use the `ggshield` on `PATH` and refuse any version other than the one in the lock file.
   - The pre-commit hook scans the staged changes.
-  - The pre-push hook scans the commits about to be published.
+  - The pre-push hook scans the commits about to be published. It covers at most `max_commits_for_hook` commits of a push (1000, set in `.gitguardian.yaml`), and ggshield lets a push through with only a warning when it cannot work out the commit range.
   - Without an API key, they stop with ggshield's error.
-  - `SKIP=ggshield,ggshield-push` skips them, but the CI job and the publication scan still apply.
+  - `SKIP=ggshield,ggshield-push` or `git push --no-verify` skips them. The CI job and the publication scan still apply.
 - **Each push and pull request:** the [secret scan workflow](.github/workflows/ggshield.yml) scans the new commits with the `GITGUARDIAN_API_KEY` Actions secret, which the repository owner sets. A manual run scans the whole history.
   - Pull requests from forks get no secrets, so for them the job only notes this. A maintainer scans such a change before merging it.
 - **A finding:**
   - A real credential is revoked or rotated first, then the history is reviewed. It is never ignored.
   - Any other finding (a test value, a public example, a false positive) is added to `.gitguardian.yaml` by its ignore SHA, with a name that gives the file and the reason. The addition is reviewed in its pull request.
   - No path or detector is ignored.
-  - A tracked file's name should not contain "secret". The development artifact's `manifest.json` pairs each tracked path with its SHA-256, and ggshield reported such a pair as a secret. An ignore entry would be needed again each time the file changed, so rename the file instead (#25).
-- **Deployment values:** ggshield does not look for AWS account IDs, ARNs or internal addresses. Before publication, search what the scan fetched for each account a deployment of yours used, and for ARNs of an account other than the documentation example. Each count must be 0:
+  - A tracked file's name should avoid credential words such as "secret", "token" or "password". The development artifact's `manifest.json` pairs each tracked path with its SHA-256, and ggshield reported such a pair as a secret. An ignore entry would be needed again each time the file changed, so rename the file instead (#25).
+- **Deployment values:** ggshield does not look for AWS account IDs, ARNs or internal addresses, so a maintainer also searches what the scan fetched:
+  - Each account that a deployment of yours used must appear 0 times anywhere.
+  - In the first-party content (the histories, the release assets and the GitHub text), list the accounts named in ARNs and the private IPv4 addresses, and review each one.
+  - The workflow artifacts also bundle third-party packages, which name documentation and AWS-owned accounts, so only your account is searched there.
+
+  Expected hits are documentation examples (such as `123456789012`), accounts that AWS owns (such as a service's image registry), and example addresses (such as a VPC CIDR).
 
   ```bash
   ACCOUNT=<your deployment account ID>; DIR=<private directory>
-  git -C "$DIR/mirror.git" log --all -p | grep -c "$ACCOUNT"
-  grep -rlI "$ACCOUNT" "$DIR/unpacked" | wc -l
-  git -C "$DIR/mirror.git" log --all -p | grep -oE 'arn:aws[a-z-]*:[a-z0-9-]*:[a-z0-9-]*:[0-9]{12}:' | grep -vc ':123456789012:'
-  grep -rhoIE 'arn:aws[a-z-]*:[a-z0-9-]*:[a-z0-9-]*:[0-9]{12}:' "$DIR/unpacked" | grep -vc ':123456789012:'
+  histories() { for git in "$DIR"/mirror.git "$DIR"/wiki.git; do [ -d "$git" ] && git -C "$git" log --all -p; done; }
+  first_party() { histories; grep -rhI '' "$DIR/unpacked/release-assets" "$DIR/unpacked/GitHub-text"; }
+  { first_party; grep -rhI '' "$DIR/unpacked/workflow-artifacts"; } | grep -c "$ACCOUNT"  # must be 0
+  first_party | grep -oE 'arn:aws[a-z-]*:[a-z0-9-]*:[a-z0-9-]*:[0-9]{12}:' | grep -oE '[0-9]{12}' | sort | uniq -c
+  first_party | grep -oE '\b(10\.[0-9]+|172\.(1[6-9]|2[0-9]|3[01])|192\.168)\.[0-9]+\.[0-9]+\b' | sort | uniq -c
   ```
 
 ## Architecture diagram

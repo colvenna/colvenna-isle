@@ -24,16 +24,17 @@ import hashlib
 import io
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
 import tarfile
 import zipfile
 import zlib
-from dataclasses import dataclass
-from pathlib import Path
+from dataclasses import dataclass, field
+from pathlib import Path, PurePosixPath
 
-from ggshield_hook import installed_version, pinned_version
+from ggshield_pin import installed_version, pinned_version
 
 ZIP_SUFFIXES = (".zip", ".whl", ".jar")
 TAR_SUFFIXES = (".tar", ".tar.gz", ".tgz")
@@ -55,12 +56,14 @@ class Unpacked:
 ARCHIVE_ERRORS = (OSError, EOFError, zlib.error, zipfile.BadZipFile, tarfile.TarError)
 
 
-def unpack(sources, out, part_chars=PART_CHARS, overlap_chars=OVERLAP_CHARS, skip_extensions=frozenset()):
+def unpack(sources, out, part_chars=PART_CHARS, overlap_chars=OVERLAP_CHARS, skip_extensions=frozenset(),
+           excluded=lambda path: False):
     """Open each source and every archive nested in it (zip, wheel, jar, tar, gzip); store each distinct file
     content once under out. A UTF-8 text longer than part_chars is stored as overlapping parts, each in a
     folder that records its number and the line it starts in. ggshield's path scan drops files by extension (skip_extensions)
     without reading them, so a UTF-8 text under such an extension gets ".txt" appended, and a binary one is
-    counted as unread. A damaged archive is stored as a file."""
+    counted as unread. A file ggshield would exclude by name (excluded, given the stored path) is stored
+    under a neutral name instead. A damaged archive is stored as a file."""
     out = Path(out)
     out.mkdir(parents=True, exist_ok=True)
     result = Unpacked()
@@ -109,7 +112,10 @@ def unpack(sources, out, part_chars=PART_CHARS, overlap_chars=OVERLAP_CHARS, ski
         for index, (first_line, part) in enumerate(parts(data, text, part_chars, overlap_chars)):
             folder = out / (digest[:16] if index == 0 else f"{digest[:16]}.{index}.L{first_line}")
             folder.mkdir()
-            (folder / name).write_bytes(part)
+            target = folder / name
+            if excluded(target):
+                target = folder / (name.replace(".", "_") + ".txt")
+            target.write_bytes(part)
 
     for source in map(Path, sources):
         for path in sorted(source.rglob("*")) if source.is_dir() else [source]:
@@ -155,6 +161,7 @@ class Scan:
     returncode: int
     report: dict
     stderr: str = ""
+    unscanned: list = field(default_factory=list)  # paths ggshield's default exclusions leave out
 
 
 BINARY_SKIP = "can't detect encoding"
@@ -186,6 +193,7 @@ def problems(scan):
         found.append(f"{scan.scope}: incomplete, ggshield reported a failed scan (see its report)")
     found += [f"  - not scanned: {file_line(filename, 1)[0]} ({reason})"
               for filename, reason in skipped(scan.stderr) if reason != BINARY_SKIP]
+    found += [f"  - not scanned: {path} (ggshield's default exclusions)" for path in scan.unscanned]
     return found
 
 
@@ -241,15 +249,29 @@ def run(command, failure=None, **options):
     return done.stdout
 
 
-def ggshield_extensions(binary):
-    """The extensions ggshield's path scan drops unread, from the Python of ggshield's environment."""
-    folder = Path(shutil.which(binary) or binary).parent
-    code = "from ggshield.utils._binary_extensions import BINARY_EXTENSIONS as B; print(' '.join(sorted(B)))"
+def ggshield_rules(binary):
+    """What ggshield 1.56.1 leaves out without saying so, read from the Python of ggshield's environment: the
+    extensions its path scan drops unread, and a predicate for the paths its default exclusions skip (in
+    every scan, history included). --ignore-default-excludes is accepted but has no effect in 1.56.1."""
+    folder = Path(shutil.which(binary) or binary).resolve().parent
+    code = ("import json\n"
+            "from ggshield.cmd.secret.scan.secret_scan_common_options import IGNORED_DEFAULT_WILDCARDS as W\n"
+            "from ggshield.core.filter import init_exclusion_regexes\n"
+            "from ggshield.utils._binary_extensions import BINARY_EXTENSIONS as B\n"
+            "print(json.dumps([sorted(B), sorted(r.pattern for r in init_exclusion_regexes(set(W)))]))")
     for python in (folder / "python3", folder / "python"):
         done = subprocess.run([str(python), "-c", code], capture_output=True, text=True) if python.exists() else None
         if done and done.returncode == 0:
-            return set(done.stdout.split())
-    sys.exit(f"cannot read the extensions ggshield drops: no Python beside {binary} imports ggshield")
+            extensions, patterns = json.loads(done.stdout)
+            regexes = [re.compile(pattern) for pattern in patterns]
+            return set(extensions), lambda path: any(r.search(PurePosixPath(path).as_posix()) for r in regexes)
+    sys.exit(f"cannot read what ggshield leaves out: no Python beside {folder / Path(binary).name} imports ggshield")
+
+
+def excluded_history_paths(clone, excluded):
+    """The paths any commit of the clone touches that ggshield's default exclusions skip."""
+    paths = set(run([*GIT, "-C", str(clone), "log", "--all", "--format=", "--name-only"]).split("\n")) - {""}
+    return sorted(path for path in paths if excluded(path))
 
 
 def slug(scope):
@@ -371,8 +393,8 @@ def main(argv=None):
     want, have = pinned_version(), installed_version(args.ggshield)
     if have != want:  # the completeness checks read this version's messages
         sys.exit(f"the scan needs ggshield {want}, installed from runtime/ggshield-requirements.lock (found: {have})")
-    skip_extensions = ggshield_extensions(args.ggshield)
-    out = args.output
+    skip_extensions, excluded = ggshield_rules(args.ggshield)
+    out = args.output.resolve()  # ggshield reports the paths it was given; file_line() maps absolute ones
     out.mkdir(mode=0o700, parents=True)
     header = [f"date: {datetime.datetime.now(datetime.timezone.utc):%Y-%m-%dT%H:%M:%SZ}",
               f"repository: {args.repository}", f"ggshield: {have}", f"quota before: {quota(args.ggshield)}"]
@@ -391,6 +413,7 @@ def main(argv=None):
     header.append(f"configuration: .gitguardian.yaml of {args.branch} {branch_sha}")
 
     scans = [ggshield(args.ggshield, config, out, "history", "repo", str(clone))]
+    scans[-1].unscanned = excluded_history_paths(clone, excluded)
     if json.loads(run(["gh", "api", f"repos/{args.repository}"]))["has_wiki"]:
         wiki = out / "wiki.git"
         run([*GIT, "clone", "--quiet", "--mirror", f"https://github.com/{args.repository}.wiki.git", str(wiki)],
@@ -398,6 +421,7 @@ def main(argv=None):
             env=ANONYMOUS_GIT)
         header.append(f"wiki: {describe_refs(wiki)}")
         scans.append(ggshield(args.ggshield, config, out, "wiki", "repo", str(wiki)))
+        scans[-1].unscanned = excluded_history_paths(wiki, excluded)
     download_releases(args.repository, out / "releases")
     download_workflow_artifacts(args.repository, out / "workflow-artifacts")
     texts = download_github_text(args.repository, out / "github-text")
@@ -405,7 +429,7 @@ def main(argv=None):
               ("GitHub text", [out / "github-text"])] + ([("paths", args.path)] if args.path else [])
     for scope, sources in groups:
         unpacked = out / "unpacked" / slug(scope)
-        stats = unpack(sources, unpacked, skip_extensions=skip_extensions)
+        stats = unpack(sources, unpacked, skip_extensions=skip_extensions, excluded=excluded)
         header.append(f"{scope}: {stats.files} files, {stats.distinct} distinct contents scanned"
                       + (f" ({texts} documents)" if scope == "GitHub text" else "")
                       + (f"; {stats.unread} binary files ggshield drops by extension" if stats.unread else ""))

@@ -134,6 +134,18 @@ class UnpackTest(unittest.TestCase):
                 self.assertTrue(place.endswith("/big.json"), place)
 
 
+    def test_a_name_that_ggshield_excludes_by_default_is_stored_under_a_neutral_name(self):
+        with tempfile.TemporaryDirectory() as work:
+            Path(work, "guide.mdx").write_bytes(b"token: abc\n")
+            Path(work, "notes.md").write_bytes(b"plain\n")
+            out = Path(work, "unpacked")
+
+            ggshield_scan.unpack([Path(work)], out, excluded=lambda path: ".mdx" in path.name)
+
+            names = sorted(path.name for path in out.rglob("*") if path.is_file())
+            self.assertEqual(names, ["guide_mdx.txt", "notes.md"])
+
+
 class ForcePushedHeadsTest(unittest.TestCase):
     def test_lists_each_replaced_head_once_across_pages(self):
         def page(nodes):
@@ -224,6 +236,15 @@ class SummarizeTest(unittest.TestCase):
         text, clean = ggshield_scan.summarize([oversized])
         self.assertFalse(clean)
         self.assertIn("  - not scanned: fedcba9876543210/big.json (content is over 1,048,576 bytes)", text)
+
+    def test_paths_the_history_scan_excludes_by_default_are_listed_and_not_clean(self):
+        scan = ggshield_scan.Scan("history", 0, {"type": "commit-range", "total_incidents": 0, "scans": []},
+                                  unscanned=["vendor/settings.py"])
+
+        text, clean = ggshield_scan.summarize([scan])
+
+        self.assertFalse(clean)
+        self.assertIn("  - not scanned: vendor/settings.py (ggshield's default exclusions)", text)
 
     def test_a_failed_scan_is_not_clean_even_without_incidents(self):
         text, clean = ggshield_scan.summarize([ggshield_scan.Scan("history", 128, {})])

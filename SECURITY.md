@@ -4,7 +4,7 @@ Security fixes are made for the latest release (currently 1.1.0). The deployment
 
 Please do not put API Keys, cloud credentials, private data, or exploit details in ordinary issues or pull requests.
 
-Secrets are scanned for with ggshield before each release. The scan covers the repository's history, its release assets, its workflow artifacts and its GitHub text. The local hooks scan each commit and each push, and CI scans each push and pull request again. [`.gitguardian.yaml`](.gitguardian.yaml) lists each value checked by hand and found not to be a credential, by hash only; see [CONTRIBUTING.md](CONTRIBUTING.md#secret-scanning).
+Secrets are scanned for with ggshield before each release. The scan covers the repository's history, its release assets, its workflow artifacts and its GitHub text. Local hooks scan each commit and each push as a best effort, and CI scans each push and pull request again. [`.gitguardian.yaml`](.gitguardian.yaml) lists each value checked by hand and found not to be a credential, by hash only; see [CONTRIBUTING.md](CONTRIBUTING.md#secret-scanning).
 
 For a confidential report, use GitHub's **Report a vulnerability** feature when it is enabled. If it is unavailable, contact the repository owner through an existing private channel before sharing sensitive details.
 
