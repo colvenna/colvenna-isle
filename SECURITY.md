@@ -4,6 +4,8 @@ Security fixes are made for the latest release (currently 1.1.0). The deployment
 
 Please do not put API Keys, cloud credentials, private data, or exploit details in ordinary issues or pull requests.
 
+The repository's history, its release assets and its workflow artifacts are scanned for secrets with ggshield before each release and before anything is made public. Each push and pull request is scanned in CI as well. [`.gitguardian.yaml`](.gitguardian.yaml) lists each value checked by hand and found not to be a credential, by hash only; see [CONTRIBUTING.md](CONTRIBUTING.md#secret-scanning).
+
 For a confidential report, use GitHub's **Report a vulnerability** feature when it is enabled. If it is unavailable, contact the repository owner through an existing private channel before sharing sensitive details.
 
 The documented authentication model uses opaque Bearer API Keys with server-side hashes, expiry, revocation, space-bound scopes, and separate management permissions. SQL execution requires server-side authorization and runtime isolation; a read-only database attachment alone is not a complete security boundary.
