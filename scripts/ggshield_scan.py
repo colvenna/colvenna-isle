@@ -13,7 +13,7 @@ branch (main by default):
 Reports with matched values stay in --output (keep it private); the summary holds none. Exit 0 only when
 every scan is complete and finds 0 incidents.
 
-usage: scripts/secret_scan.py --output DIR [--repository OWNER/NAME] [--branch BRANCH] [--path PATH ...]
+usage: scripts/ggshield_scan.py --output DIR [--repository OWNER/NAME] [--branch BRANCH] [--path PATH ...]
                               [--ggshield BINARY]
 """
 

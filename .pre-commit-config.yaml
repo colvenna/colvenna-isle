@@ -1,6 +1,6 @@
 # Local hooks (https://pre-commit.com): `pre-commit install` once per clone.
 # ggshield scans the staged changes for secrets with .gitguardian.yaml. The hook runs the ggshield on PATH,
-# installed from runtime/secret-scan-requirements.lock, and needs a GitGuardian API key
+# installed from runtime/ggshield-requirements.lock, and needs a GitGuardian API key
 # (GITGUARDIAN_API_KEY, or `ggshield auth login`). See CONTRIBUTING.md#secret-scanning.
 repos:
   - repo: local

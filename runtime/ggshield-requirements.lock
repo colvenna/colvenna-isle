@@ -1,4 +1,4 @@
-# Secret scan (ggshield, scripts/secret_scan.py and CI): Python 3.12, Linux arm64. Downloaded wheel hashes.
+# Secret scan (ggshield: scripts/ggshield_scan.py, the pre-commit hook and CI): Python 3.12, Linux arm64. Downloaded wheel hashes.
 annotated-types==0.8.0 --hash=sha256:f072f4d804ea359e4eaf198b1af7a8b0943881a87f31bb764f8bf219bb9419e0
 anyio==4.16.0 --hash=sha256:c66ae634e0b8228396b801741beb3294326d4b6102f7bba4041c0dfb58c29026
 certifi==2026.10.23 --hash=sha256:e9b54de76e530bb6cf0ccd036787103acb58fd42ba930ea8bf948ddbaa2f61d1

@@ -17,12 +17,12 @@ jobs:
         with:
           fetch-depth: 0
       - name: Check the publication scan's local seams
-        run: python3 -m unittest discover -s tests/secret_scan -v
+        run: python3 -m unittest discover -s tests/ggshield_scan -v
       - name: Install hash-locked ggshield
         run: |
           python3 -m venv "$RUNNER_TEMP/ggshield"
           "$RUNNER_TEMP/ggshield/bin/python" -m pip install --require-hashes --only-binary=:all: \
-            -r runtime/secret-scan-requirements.lock
+            -r runtime/ggshield-requirements.lock
       - name: Scan with the repository's .gitguardian.yaml
         env:
           GITGUARDIAN_API_KEY: ${{ secrets.GITGUARDIAN_API_KEY }}

@@ -18,7 +18,7 @@ python3 scripts/check_docs.py
 checks local links, SVG/XML and JSON syntax and the architecture receipts.
 
 ```bash
-python3 -m unittest discover -s tests/secret_scan
+python3 -m unittest discover -s tests/ggshield_scan
 ```
 
 checks the [publication secret scan](#secret-scanning)'s archive unpacking and report without ggshield or the network.
@@ -44,14 +44,14 @@ Nothing is made public before [ggshield](https://docs.gitguardian.com/ggshield-d
 ```bash
 python3 -m venv ~/.venvs/colvenna-ggshield
 ~/.venvs/colvenna-ggshield/bin/python -m pip install --require-hashes --only-binary=:all: \
-  -r runtime/secret-scan-requirements.lock
+  -r runtime/ggshield-requirements.lock
 export PATH="$HOME/.venvs/colvenna-ggshield/bin:$PATH" GITGUARDIAN_API_KEY=...  # or: ggshield auth login
 ```
 
 - **Before a release, or before the repository is made public**, a maintainer runs the publication scan, then attaches its summary to the release's verification record. Check the remaining API quota first with `ggshield quota`, because a full scan uses part of it.
 
   ```bash
-  python3 scripts/secret_scan.py --output <private directory> [--path <release build output>]
+  python3 scripts/ggshield_scan.py --output <private directory> [--path <release build output>]
   ```
 
   It scans everything the public can fetch:
@@ -67,7 +67,7 @@ export PATH="$HOME/.venvs/colvenna-ggshield/bin:$PATH" GITGUARDIAN_API_KEY=...  
 - **Each commit:** `pre-commit install` enables the [ggshield hook](.pre-commit-config.yaml). It runs the `ggshield` on `PATH` on the staged changes.
   - Without an API key, it stops with ggshield's error.
   - `SKIP=ggshield git commit ...` skips the hook, but the CI job and the publication scan still apply.
-- **Each push and pull request:** the [secret scan workflow](.github/workflows/secret-scan.yml) scans the new commits with the `GITGUARDIAN_API_KEY` Actions secret, which the repository owner sets. A manual run scans the whole history.
+- **Each push and pull request:** the [secret scan workflow](.github/workflows/ggshield.yml) scans the new commits with the `GITGUARDIAN_API_KEY` Actions secret, which the repository owner sets. A manual run scans the whole history.
   - Pull requests from forks get no secrets, so for them the job only notes this. A maintainer scans such a change before merging it.
 - **A finding:**
   - A real credential is revoked or rotated first, then the history is reviewed. It is never ignored.

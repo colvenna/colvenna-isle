@@ -1,4 +1,4 @@
-"""Seams of the publication secret scan (scripts/secret_scan.py) that run without ggshield or the network."""
+"""Seams of the publication secret scan (scripts/ggshield_scan.py) that run without ggshield or the network."""
 
 import gzip
 import io
@@ -11,7 +11,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
-import secret_scan  # noqa: E402
+import ggshield_scan  # noqa: E402
 
 
 def zip_bytes(members):
@@ -37,7 +37,7 @@ class UnpackTest(unittest.TestCase):
             second.write_bytes(zip_bytes({"control/control.zip": control, "build.log": b"same log\n"}))
             out = Path(work, "unpacked")
 
-            result = secret_scan.unpack([first, second], out)
+            result = ggshield_scan.unpack([first, second], out)
 
             self.assertEqual(stored_files(out), [b"print('handler')\n", b"same log\n", b"token = 'inner'\n"])
             self.assertEqual(result.files, 6)
@@ -55,7 +55,7 @@ class UnpackTest(unittest.TestCase):
             source.write_bytes(zip_bytes({"../../zip-escape.txt": b"zip up\n", "bundle.tar.gz": tar_buffer.getvalue()}))
             out = Path(work, "nested", "unpacked")
 
-            secret_scan.unpack([source], out)
+            ggshield_scan.unpack([source], out)
 
             written = [path for path in Path(work).rglob("*") if path.is_file() and path != source]
             self.assertEqual(sorted(path.read_bytes() for path in written), [b"absolute\n", b"tar up\n", b"zip up\n"])
@@ -71,7 +71,7 @@ class UnpackTest(unittest.TestCase):
                 zip_bytes({"colvenna_isle/__init__.py": b"VERSION = '0'\n"}))
             out = Path(work, "unpacked")
 
-            result = secret_scan.unpack([build], out)
+            result = ggshield_scan.unpack([build], out)
 
             self.assertEqual(stored_files(out), [b"VERSION = '0'\n", b"checks passed\n"])
             self.assertEqual(result.files, 2)
@@ -86,7 +86,7 @@ class UnpackTest(unittest.TestCase):
             Path(work, "promo.mp4").write_bytes(binary)
             out = Path(work, "unpacked")
 
-            result = secret_scan.unpack([Path(work, "models.json.gz"), Path(work, "promo.mp4")], out,
+            result = ggshield_scan.unpack([Path(work, "models.json.gz"), Path(work, "promo.mp4")], out,
                                         part_chars=100, overlap_chars=50)
 
             stored = stored_files(out)
@@ -114,7 +114,7 @@ class ForcePushedHeadsTest(unittest.TestCase):
             ]}}]),
         ]
 
-        self.assertEqual(secret_scan.force_pushed_heads(pages), ["a" * 40, "d" * 40])
+        self.assertEqual(ggshield_scan.force_pushed_heads(pages), ["a" * 40, "d" * 40])
 
 
 SECRET = "s3cr3t-Value-0123456789abcdef"
@@ -129,12 +129,12 @@ def incident(detector, ignore_sha, line):
 class SummarizeTest(unittest.TestCase):
     def test_no_incident_in_any_scope_is_clean(self):
         scans = [
-            secret_scan.Scan("history", 0, {"type": "commit-range", "total_incidents": 0, "scans": []}),
-            secret_scan.Scan("release assets", 0, {"type": "path_scan", "total_incidents": 0,
+            ggshield_scan.Scan("history", 0, {"type": "commit-range", "total_incidents": 0, "scans": []}),
+            ggshield_scan.Scan("release assets", 0, {"type": "path_scan", "total_incidents": 0,
                                                    "entities_with_incidents": []}),
         ]
 
-        text, clean = secret_scan.summarize(scans)
+        text, clean = ggshield_scan.summarize(scans)
 
         self.assertTrue(clean)
         self.assertIn("history: 0 incidents", text)
@@ -150,8 +150,8 @@ class SummarizeTest(unittest.TestCase):
             {"mode": "FILE", "filename": "/tmp/unpacked/0123456789abcdef/build.log", "total_incidents": 1,
              "incidents": [incident("Generic Password", "2" * 64, 3)]}]}
 
-        text, clean = secret_scan.summarize([secret_scan.Scan("history", 1, history),
-                                             secret_scan.Scan("artifacts", 1, artifacts)])
+        text, clean = ggshield_scan.summarize([ggshield_scan.Scan("history", 1, history),
+                                             ggshield_scan.Scan("artifacts", 1, artifacts)])
 
         self.assertFalse(clean)
         self.assertNotIn(SECRET, text)
@@ -162,13 +162,13 @@ class SummarizeTest(unittest.TestCase):
         self.assertTrue(text.rstrip().endswith("VERDICT: FINDINGS"))
 
     def test_an_incomplete_scan_is_not_clean_even_when_ggshield_exits_0(self):
-        failed_chunk = secret_scan.Scan("history", 0, {"type": "commit-range", "total_incidents": 0, "scans": []},
+        failed_chunk = ggshield_scan.Scan("history", 0, {"type": "commit-range", "total_incidents": 0, "scans": []},
                                         "Error: Scanning failed. Results may be incomplete.\n")
-        report_errors = secret_scan.Scan("paths", 0, {"type": "path_scan", "total_incidents": 0,
+        report_errors = ggshield_scan.Scan("paths", 0, {"type": "path_scan", "total_incidents": 0,
                                                       "errors": [{"files": [], "description": "timeout"}]})
 
         for scan in (failed_chunk, report_errors):
-            text, clean = secret_scan.summarize([scan])
+            text, clean = ggshield_scan.summarize([scan])
             self.assertFalse(clean, scan.scope)
             self.assertIn(f"{scan.scope}: incomplete", text)
             self.assertTrue(text.rstrip().endswith("VERDICT: FINDINGS"))
@@ -177,20 +177,20 @@ class SummarizeTest(unittest.TestCase):
         stderr = ("Skipped file:///tmp/unpacked/0123456789abcdef/promo.mp4: can't detect encoding\n"
                   "Warning: Rate-limit hit, retrying in 1 seconds\n"
                   "Skipped file:///tmp/unpacked/fedcba9876543210/big.json: content is over 1,048,576 bytes\n")
-        binary_only = secret_scan.Scan("paths", 0, {"type": "path_scan", "total_incidents": 0},
+        binary_only = ggshield_scan.Scan("paths", 0, {"type": "path_scan", "total_incidents": 0},
                                        stderr.splitlines(keepends=True)[0])
-        oversized = secret_scan.Scan("paths", 0, {"type": "path_scan", "total_incidents": 0}, stderr)
+        oversized = ggshield_scan.Scan("paths", 0, {"type": "path_scan", "total_incidents": 0}, stderr)
 
-        text, clean = secret_scan.summarize([binary_only])
+        text, clean = ggshield_scan.summarize([binary_only])
         self.assertTrue(clean)
         self.assertIn("paths: 0 incidents; 1 binary files not scanned (can't detect encoding)", text)
 
-        text, clean = secret_scan.summarize([oversized])
+        text, clean = ggshield_scan.summarize([oversized])
         self.assertFalse(clean)
         self.assertIn("  - not scanned: fedcba9876543210/big.json (content is over 1,048,576 bytes)", text)
 
     def test_a_failed_scan_is_not_clean_even_without_incidents(self):
-        text, clean = secret_scan.summarize([secret_scan.Scan("history", 128, {})])
+        text, clean = ggshield_scan.summarize([ggshield_scan.Scan("history", 128, {})])
 
         self.assertFalse(clean)
         self.assertIn("history: ggshield exited 128", text)
