@@ -2,20 +2,24 @@
 """Publication secret scan with ggshield (GitGuardian's CLI), required before the repository or a release
 is made public (CONTRIBUTING.md#secret-scanning).
 
-It scans what the public can fetch, with the .gitguardian.yaml of the scanned main branch:
+It scans everything the public can fetch from the repository, with the .gitguardian.yaml of the scanned
+branch (main by default):
   - history: an anonymous `git clone --mirror` (every branch, tag and refs/pull/*), plus each pull-request
     head a force push replaced that GitHub still serves by its SHA;
-  - release assets (--releases) and workflow artifacts (--workflow-artifacts) as published, and local
-    paths (--path), each archive opened recursively and each distinct file scanned once.
-Reports with matched values stay in --output (keep it private); the printed summary holds none.
-Exit 0 only when every scan finds 0 incidents.
+  - release assets and workflow artifacts as published, and any local --path, each archive opened
+    recursively (zip, wheel, jar, tar, gzip) and each distinct file scanned once;
+  - GitHub text: issues and pull requests with their comments, reviews and review comments, release notes
+    and commit comments.
+Reports with matched values stay in --output (keep it private); the summary holds none. Exit 0 only when
+every scan is complete and finds 0 incidents.
 
-usage: scripts/secret_scan.py --output DIR [--repository OWNER/NAME] [--releases] [--workflow-artifacts]
-                              [--path PATH ...]
+usage: scripts/secret_scan.py --output DIR [--repository OWNER/NAME] [--branch BRANCH] [--path PATH ...]
+                              [--ggshield BINARY]
 """
 
 import argparse
 import datetime
+import gzip
 import hashlib
 import io
 import json
@@ -31,6 +35,11 @@ from pathlib import Path
 ZIP_SUFFIXES = (".zip", ".whl", ".jar")
 TAR_SUFFIXES = (".tar", ".tar.gz", ".tgz")
 MAX_DEPTH = 6
+# ggshield skips a document over 1 MiB (its API's limit) and a request body over 2.5 MiB, in which JSON
+# escaping can grow text up to 6 times; parts of 200,000 characters (at most 800 kB of UTF-8) stay under
+# both. Parts overlap, so a value that crosses a cut is whole in one of them.
+PART_CHARS = 200_000
+OVERLAP_CHARS = 4_096
 
 
 @dataclass
@@ -39,8 +48,9 @@ class Unpacked:
     distinct: int = 0
 
 
-def unpack(sources, out):
-    """Open each source and every archive nested in it; store each distinct file content once under out."""
+def unpack(sources, out, part_chars=PART_CHARS, overlap_chars=OVERLAP_CHARS):
+    """Open each source and every archive nested in it (zip, wheel, jar, tar, gzip); store each distinct file
+    content once under out, a UTF-8 text longer than part_chars as overlapping parts."""
     out = Path(out)
     out.mkdir(parents=True, exist_ok=True)
     result = Unpacked()
@@ -62,15 +72,22 @@ def unpack(sources, out):
                 return
             except tarfile.TarError:
                 pass
+        if depth < MAX_DEPTH and name.lower().endswith(".gz"):
+            try:
+                visit(name[:-3], gzip.decompress(data), depth + 1)
+                return
+            except (OSError, EOFError):
+                pass
         result.files += 1
         digest = hashlib.sha256(data).hexdigest()
         if digest in seen:
             return
         seen.add(digest)
         result.distinct += 1
-        folder = out / digest[:16]
-        folder.mkdir()
-        (folder / Path(name).name).write_bytes(data)
+        for index, part in enumerate(parts(data, part_chars, overlap_chars)):
+            folder = out / (digest[:16] if index == 0 else f"{digest[:16]}.{index}")
+            folder.mkdir()
+            (folder / Path(name).name).write_bytes(part)
 
     for source in map(Path, sources):
         for path in sorted(source.rglob("*")) if source.is_dir() else [source]:
@@ -79,18 +96,31 @@ def unpack(sources, out):
     return result
 
 
+def parts(data, part_chars, overlap_chars):
+    """data itself, or a UTF-8 text longer than part_chars as windows that overlap by overlap_chars."""
+    if len(data) <= part_chars:
+        return [data]
+    try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError:
+        return [data]
+    if len(text) <= part_chars:
+        return [data]
+    step = part_chars - overlap_chars
+    return [text[start:start + part_chars].encode() for start in range(0, len(text) - overlap_chars, step)]
+
+
 def force_pushed_heads(pages):
-    """(pull request, replaced head SHA) of each force push in the GraphQL pages, each SHA once.
+    """The head SHA each force push in the GraphQL pages replaced, each once.
 
     GitHub keeps serving such a commit by its SHA once the repository is public, though no ref reaches it."""
-    heads, seen = [], set()
+    heads = []
     for page in pages:
         for pull in page["data"]["repository"]["pullRequests"]["nodes"]:
             for event in pull["timelineItems"]["nodes"]:
                 sha = (event.get("beforeCommit") or {}).get("oid")
-                if sha and sha not in seen:
-                    seen.add(sha)
-                    heads.append((pull["number"], sha))
+                if sha and sha not in heads:
+                    heads.append(sha)
     return heads
 
 
@@ -99,29 +129,61 @@ class Scan:
     scope: str
     returncode: int
     report: dict
+    stderr: str = ""
+
+
+BINARY_SKIP = "can't detect encoding"
+
+
+def skipped(stderr):
+    """(file, reason) of each item ggshield skipped, from its "Skipped <url>: <reason>" lines."""
+    for line in stderr.splitlines():
+        if line.startswith("Skipped "):
+            url, _, reason = line[len("Skipped "):].rpartition(": ")
+            yield url.split("://", 1)[-1], reason
+
+
+def has_errors(report):
+    return bool(report.get("errors")) or any(has_errors(inner) for inner in report.get("scans") or [])
+
+
+def located(filename):
+    path = Path(filename)
+    return Path(*path.parts[-2:]) if path.is_absolute() else path
 
 
 def summarize(scans):
-    """A report of each scan that locates every incident without its value, and whether all are clean."""
+    """A report of each scan that locates every incident without its value, and whether all are clean.
+
+    A scan is clean when ggshield exits 0, reports no incident and no error, says nothing failed, and skips
+    nothing but binary files (which it cannot decode)."""
     lines, clean = [], True
     for scan in scans:
         if scan.returncode not in (0, 1) or "total_incidents" not in scan.report:
             lines.append(f"{scan.scope}: ggshield exited {scan.returncode}")
             clean = False
             continue
+        if has_errors(scan.report) or "Scanning failed" in scan.stderr:
+            lines.append(f"{scan.scope}: incomplete, ggshield reported a failed scan (see its report)")
+            clean = False
         total = scan.report["total_incidents"]
-        lines.append(f"{scan.scope}: {total} incidents")
+        skips = list(skipped(scan.stderr))
+        binary = sum(reason == BINARY_SKIP for _, reason in skips)
+        lines.append(f"{scan.scope}: {total} incidents"
+                     + (f"; {binary} binary files not scanned ({BINARY_SKIP})" if binary else ""))
         clean = clean and scan.returncode == 0 and total == 0
+        for filename, reason in skips:
+            if reason != BINARY_SKIP:
+                lines.append(f"  - not scanned: {located(filename)} ({reason})")
+                clean = False
         commits = scan.report.get("scans")
         for commit in commits if commits is not None else [scan.report]:
             where = f"commit {commit['id'][:12]}, " if commits is not None else ""
             for entity in commit.get("entities_with_incidents") or []:
-                filename = Path(entity["filename"])
-                if filename.is_absolute():
-                    filename = Path(*filename.parts[-2:])
                 for found in entity["incidents"]:
                     line = found["occurrences"][0]["line_start"] if found["occurrences"] else "?"
-                    lines.append(f"  - {found['type']}, {where}{filename}:{line}, ignore_sha {found['ignore_sha']}")
+                    lines.append(f"  - {found['type']}, {where}{located(entity['filename'])}:{line}, "
+                                 f"ignore_sha {found['ignore_sha']}")
     lines.append("VERDICT: CLEAN" if clean else "VERDICT: FINDINGS")
     return "\n".join(lines) + "\n", clean
 
@@ -130,73 +192,114 @@ FORCE_PUSHES = """query($owner: String!, $name: String!, $cursor: String) {
   repository(owner: $owner, name: $name) {
     pullRequests(first: 50, after: $cursor) {
       pageInfo { hasNextPage endCursor }
-      nodes { number timelineItems(first: 100, itemTypes: [HEAD_REF_FORCE_PUSHED_EVENT]) {
-        nodes { ... on HeadRefForcePushedEvent { beforeCommit { oid } afterCommit { oid } } } } }
+      nodes { timelineItems(first: 100, itemTypes: [HEAD_REF_FORCE_PUSHED_EVENT]) {
+        nodes { ... on HeadRefForcePushedEvent { beforeCommit { oid } } } } }
     }
   }
 }"""
-ANONYMOUS_GIT = {**os.environ, "GIT_TERMINAL_PROMPT": "0"}
+ANONYMOUS_GIT = {**os.environ, "GIT_TERMINAL_PROMPT": "0"}  # never prompt; no credential helper either
+GIT = ["git", "-c", "credential.helper="]
 
 
 def run(command, **options):
-    return subprocess.run(command, check=True, capture_output=True, text=True, **options).stdout
+    done = subprocess.run(command, capture_output=True, text=True, **options)
+    if done.returncode:
+        sys.exit(f"{' '.join(command[:4])} ... failed ({done.returncode}): {done.stderr.strip()}")
+    return done.stdout
 
 
-def gh_json(*args):
-    return json.loads(run(["gh", "api", *args]))
+def slug(scope):
+    return scope.replace(" ", "-")
 
 
-def mirror(repository, out):
-    """An anonymous mirror clone plus the force-pushed-away heads GitHub serves; a line about the refs."""
-    url = f"https://github.com/{repository}.git"
-    git = ["git", "-c", "credential.helper=", "-C", str(out)]
-    run(["git", "-c", "credential.helper=", "clone", "--quiet", "--mirror", url, str(out)], env=ANONYMOUS_GIT)
-    run([*git, "remote", "set-url", "--push", "origin", "no-push://read-only"])
+def mirror(repository, clone):
+    run([*GIT, "clone", "--quiet", "--mirror", f"https://github.com/{repository}.git", str(clone)],
+        env=ANONYMOUS_GIT)
+    run([*GIT, "-C", str(clone), "remote", "set-url", "--push", "origin", "no-push://read-only"])
+
+
+def fetch_force_pushed(repository, clone):
+    """Fetch into the clone each replaced pull-request head GitHub still serves; count them by outcome."""
     owner, name = repository.split("/", 1)
     pages, cursor = [], None
     while True:
-        args = ["graphql", "-f", "query=" + FORCE_PUSHES, "-F", "owner=" + owner, "-F", "name=" + name]
-        pages.append(gh_json(*args, *(["-F", "cursor=" + cursor] if cursor else [])))
+        args = ["gh", "api", "graphql", "-f", "query=" + FORCE_PUSHES, "-F", "owner=" + owner, "-F", "name=" + name]
+        pages.append(json.loads(run(args + (["-F", "cursor=" + cursor] if cursor else []))))
         info = pages[-1]["data"]["repository"]["pullRequests"]["pageInfo"]
         if not info["hasNextPage"]:
             break
         cursor = info["endCursor"]
-    status = {"reachable": 0, "fetched": 0, "not served": 0}
-    for _, sha in force_pushed_heads(pages):
+    status = {"fetched": 0, "still reachable": 0, "not served": 0}
+    git = [*GIT, "-C", str(clone)]
+    for sha in force_pushed_heads(pages):
         if subprocess.run([*git, "cat-file", "-e", sha + "^{commit}"], capture_output=True).returncode == 0:
-            status["reachable"] += 1
+            status["still reachable"] += 1
         elif subprocess.run([*git, "fetch", "--quiet", "origin", f"{sha}:refs/force-pushed/{sha}"],
                             capture_output=True, env=ANONYMOUS_GIT).returncode == 0:
             status["fetched"] += 1
         else:
             status["not served"] += 1
-    refs = run([*git, "for-each-ref", "--format=%(refname)"]).split()
-    count = lambda prefix: sum(ref.startswith(prefix) for ref in refs)  # noqa: E731
-    commits = run([*git, "rev-list", "--all", "--count"]).strip()
-    return (f"refs: {count('refs/heads/')} branches, {count('refs/tags/')} tags, {count('refs/pull/')} refs/pull; "
-            f"force-pushed heads: {status['fetched']} fetched, {status['reachable']} still reachable, "
-            f"{status['not served']} not served; {commits} commits")
+    return status
+
+
+def describe_refs(clone):
+    refs = run([*GIT, "-C", str(clone), "for-each-ref", "--format=%(refname)"]).split()
+    count = {kind: sum(ref.startswith(f"refs/{kind}/") for ref in refs) for kind in ("heads", "tags", "pull")}
+    commits = run([*GIT, "-C", str(clone), "rev-list", "--all", "--count"]).strip()
+    return f"{count['heads']} branches, {count['tags']} tags, {count['pull']} refs/pull; {commits} commits"
 
 
 def download_releases(repository, out):
-    tags = run(["gh", "api", "--paginate", f"repos/{repository}/releases?per_page=100", "--jq", ".[].tag_name"])
+    out.mkdir(parents=True)
+    tags = run(["gh", "api", "--paginate", f"repos/{repository}/releases?per_page=100",
+                "--jq", ".[] | select(.assets | length > 0) | .tag_name"])
     for tag in tags.split():
-        (out / tag).mkdir(parents=True)
+        (out / tag).mkdir()
         run(["gh", "release", "download", tag, "-R", repository, "-D", str(out / tag)])
 
 
 def download_workflow_artifacts(repository, out):
     out.mkdir(parents=True)
-    pages = run(["gh", "api", "--paginate", f"repos/{repository}/actions/artifacts?per_page=100",
-                 "--jq", ".artifacts[] | select(.expired | not) | .id"])
-    for artifact in pages.split():
-        with open(out / f"{artifact}.zip", "wb") as stream:
-            subprocess.run(["gh", "api", f"repos/{repository}/actions/artifacts/{artifact}/zip"],
+    artifact_ids = run(["gh", "api", "--paginate", f"repos/{repository}/actions/artifacts?per_page=100",
+                        "--jq", ".artifacts[] | select(.expired | not) | .id"])
+    for artifact_id in artifact_ids.split():
+        with open(out / f"{artifact_id}.zip", "wb") as stream:
+            subprocess.run(["gh", "api", f"repos/{repository}/actions/artifacts/{artifact_id}/zip"],
                            check=True, stdout=stream)
 
 
+GITHUB_TEXT = [  # (API path, jq that emits one {name, text} object a line)
+    ("issues?state=all&per_page=100",
+     '.[] | {name: "\\(if .pull_request then "pull" else "issue" end)-\\(.number).md", '
+     'text: "\\(.title)\\n\\n\\(.body // "")"}'),
+    ("issues/comments?per_page=100", '.[] | {name: "comment-\\(.id).md", text: (.body // "")}'),
+    ("pulls/comments?per_page=100",
+     '.[] | {name: "review-comment-\\(.id).md", text: "\\(.diff_hunk // "")\\n\\n\\(.body // "")"}'),
+    ("releases?per_page=100", '.[] | {name: "release-\\(.tag_name).md", text: "\\(.name // "")\\n\\n\\(.body // "")"}'),
+    ("comments?per_page=100", '.[] | {name: "commit-comment-\\(.id).md", text: (.body // "")}'),
+]
+
+
+def download_github_text(repository, out):
+    """Write each issue, pull request, comment, review, release note and commit comment to its own file."""
+    out.mkdir(parents=True)
+    documents = []
+    for path, jq in GITHUB_TEXT:
+        documents += run(["gh", "api", "--paginate", f"repos/{repository}/{path}", "--jq", jq]).splitlines()
+    pulls = run(["gh", "api", "--paginate", f"repos/{repository}/pulls?state=all&per_page=100",
+                 "--jq", ".[].number"]).split()
+    for number in pulls:
+        documents += run(["gh", "api", "--paginate", f"repos/{repository}/pulls/{number}/reviews?per_page=100",
+                          "--jq", f'.[] | select(.body != "") | {{name: "pull-{number}-review-\\(.id).md", '
+                                  'text: .body}']).splitlines()
+    for line in documents:
+        document = json.loads(line)
+        (out / document["name"]).write_text(document["text"])
+    return len(documents)
+
+
 def ggshield(binary, config, out, scope, *command):
-    report = out / (scope.replace(" ", "-") + ".json")
+    report = out / f"{slug(scope)}.json"
     with open(report, "w") as stdout, open(report.with_suffix(".stderr"), "w") as stderr:
         returncode = subprocess.run([binary, "--config-path", str(config), "secret", "scan", *command, "--json"],
                                     stdout=stdout, stderr=stderr).returncode
@@ -204,7 +307,12 @@ def ggshield(binary, config, out, scope, *command):
         data = json.loads(report.read_text())
     except json.JSONDecodeError:
         data = {}
-    return Scan(scope, returncode, data)
+    return Scan(scope, returncode, data, report.with_suffix(".stderr").read_text())
+
+
+def quota(binary):
+    done = subprocess.run([binary, "quota"], capture_output=True, text=True)
+    return done.stdout.splitlines()[0] if done.returncode == 0 and done.stdout else "unavailable"
 
 
 def main(argv=None):
@@ -212,47 +320,53 @@ def main(argv=None):
     parser.add_argument("--output", type=Path, required=True, help="new private directory for the reports")
     parser.add_argument("--repository", default="colvenna/colvenna-isle")
     parser.add_argument("--branch", default="main", help="the branch whose .gitguardian.yaml applies")
-    parser.add_argument("--releases", action="store_true", help="scan every published release's assets")
-    parser.add_argument("--workflow-artifacts", action="store_true", help="scan every unexpired workflow artifact")
     parser.add_argument("--path", type=Path, action="append", default=[], help="a local file or directory")
     parser.add_argument("--ggshield", default=shutil.which("ggshield") or "ggshield")
     args = parser.parse_args(argv)
 
     out = args.output
     out.mkdir(mode=0o700, parents=True)
-    version = run([args.ggshield, "--version"]).strip()
     header = [f"date: {datetime.datetime.now(datetime.timezone.utc):%Y-%m-%dT%H:%M:%SZ}",
-              f"repository: {args.repository}", f"ggshield: {version}"]
+              f"repository: {args.repository}", f"ggshield: {run([args.ggshield, '--version']).strip()}",
+              f"quota before: {quota(args.ggshield)}"]
 
     clone = out / "mirror.git"
-    header.append(mirror(args.repository, clone))
-    branch = run(["git", "-C", str(clone), "rev-parse", f"refs/heads/{args.branch}"]).strip()
+    mirror(args.repository, clone)
+    pushed = fetch_force_pushed(args.repository, clone)
+    header.append(f"refs: {describe_refs(clone)}; force-pushed heads: "
+                  + ", ".join(f"{number} {outcome}" for outcome, number in pushed.items()))
+    found = subprocess.run([*GIT, "-C", str(clone), "rev-parse", "--verify", f"refs/heads/{args.branch}"],
+                           capture_output=True, text=True)
+    if found.returncode:
+        sys.exit(f"the repository has no branch {args.branch}")
+    branch_sha = found.stdout.strip()
     config = out / "gitguardian.yaml"
-    try:
-        config.write_text(run(["git", "-C", str(clone), "show", f"refs/heads/{args.branch}:.gitguardian.yaml"]))
-    except subprocess.CalledProcessError:
+    shown = subprocess.run([*GIT, "-C", str(clone), "show", f"{branch_sha}:.gitguardian.yaml"],
+                           capture_output=True, text=True)
+    if shown.returncode:
         sys.exit(f"{args.branch} has no .gitguardian.yaml: the scan uses the repository's own configuration")
-    header.append(f"configuration: .gitguardian.yaml of {args.branch} {branch}")
+    config.write_text(shown.stdout)
+    header.append(f"configuration: .gitguardian.yaml of {args.branch} {branch_sha}")
 
     scans = [ggshield(args.ggshield, config, out, "history", "repo", str(clone))]
-    groups = []
-    if args.releases:
-        download_releases(args.repository, out / "releases")
-        groups.append(("release assets", [out / "releases"]))
-    if args.workflow_artifacts:
-        download_workflow_artifacts(args.repository, out / "workflow-artifacts")
-        groups.append(("workflow artifacts", [out / "workflow-artifacts"]))
-    if args.path:
-        groups.append(("paths", args.path))
+    download_releases(args.repository, out / "releases")
+    download_workflow_artifacts(args.repository, out / "workflow-artifacts")
+    texts = download_github_text(args.repository, out / "github-text")
+    groups = [("release assets", [out / "releases"]), ("workflow artifacts", [out / "workflow-artifacts"]),
+              ("GitHub text", [out / "github-text"])] + ([("paths", args.path)] if args.path else [])
     for scope, sources in groups:
-        unpacked = out / "unpacked" / scope.replace(" ", "-")
+        unpacked = out / "unpacked" / slug(scope)
         stats = unpack(sources, unpacked)
-        header.append(f"{scope}: {stats.files} files, {stats.distinct} distinct contents scanned")
-        scans.append(ggshield(args.ggshield, config, out, scope, "path", "--recursive", "--yes", str(unpacked)))
+        header.append(f"{scope}: {stats.files} files, {stats.distinct} distinct contents scanned"
+                      + (f" ({texts} documents)" if scope == "GitHub text" else ""))
+        if stats.files:
+            scans.append(ggshield(args.ggshield, config, out, scope, "path", "--recursive", "--yes", str(unpacked)))
 
     text, clean = summarize(scans)
-    (out / "summary.txt").write_text("\n".join(header) + "\n" + text)
-    print("\n".join(header) + "\n" + text + f"reports: {out}")
+    header.append(f"quota after: {quota(args.ggshield)}")
+    report = "\n".join(header) + "\n" + text
+    (out / "summary.txt").write_text(report)
+    print(report + f"reports: {out}")
     return 0 if clean else 1
 
 

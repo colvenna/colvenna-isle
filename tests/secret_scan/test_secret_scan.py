@@ -1,5 +1,6 @@
 """Seams of the publication secret scan (scripts/secret_scan.py) that run without ggshield or the network."""
 
+import gzip
 import io
 import sys
 import tarfile
@@ -76,6 +77,27 @@ class UnpackTest(unittest.TestCase):
             self.assertEqual(result.files, 2)
 
 
+    def test_text_over_the_part_size_is_stored_in_overlapping_parts_and_gzip_is_opened(self):
+        marker = "BEGIN-" + "x" * 30 + "-END"
+        text = ("a" * 95 + marker + "b" * 160).encode()  # the marker crosses the first 100-character cut
+        binary = bytes(range(256)) * 2  # not valid UTF-8, like any media file
+        with tempfile.TemporaryDirectory() as work:
+            Path(work, "models.json.gz").write_bytes(gzip.compress(text))
+            Path(work, "promo.mp4").write_bytes(binary)
+            out = Path(work, "unpacked")
+
+            result = secret_scan.unpack([Path(work, "models.json.gz"), Path(work, "promo.mp4")], out,
+                                        part_chars=100, overlap_chars=50)
+
+            stored = stored_files(out)
+            parts = [data for data in stored if data != binary]
+            self.assertIn(binary, stored)
+            self.assertTrue(all(len(part) <= 100 for part in parts))
+            self.assertTrue(any(marker.encode() in part for part in parts))
+            self.assertGreater(len(parts), 2)
+            self.assertEqual(result.files, 2)
+
+
 class ForcePushedHeadsTest(unittest.TestCase):
     def test_lists_each_replaced_head_once_across_pages(self):
         def page(nodes):
@@ -83,16 +105,16 @@ class ForcePushedHeadsTest(unittest.TestCase):
 
         pages = [
             page([{"number": 3, "timelineItems": {"nodes": [
-                {"beforeCommit": {"oid": "a" * 40}, "afterCommit": {"oid": "b" * 40}},
-                {"beforeCommit": None, "afterCommit": {"oid": "c" * 40}},
+                {"beforeCommit": {"oid": "a" * 40}},
+                {"beforeCommit": None},
             ]}}, {"number": 4, "timelineItems": {"nodes": []}}]),
             page([{"number": 9, "timelineItems": {"nodes": [
-                {"beforeCommit": {"oid": "d" * 40}, "afterCommit": {"oid": "e" * 40}},
-                {"beforeCommit": {"oid": "a" * 40}, "afterCommit": {"oid": "f" * 40}},
+                {"beforeCommit": {"oid": "d" * 40}},
+                {"beforeCommit": {"oid": "a" * 40}},
             ]}}]),
         ]
 
-        self.assertEqual(secret_scan.force_pushed_heads(pages), [(3, "a" * 40), (9, "d" * 40)])
+        self.assertEqual(secret_scan.force_pushed_heads(pages), ["a" * 40, "d" * 40])
 
 
 SECRET = "s3cr3t-Value-0123456789abcdef"
@@ -138,6 +160,34 @@ class SummarizeTest(unittest.TestCase):
                       text)
         self.assertIn("Generic Password, 0123456789abcdef/build.log:3, ignore_sha " + "2" * 64, text)
         self.assertTrue(text.rstrip().endswith("VERDICT: FINDINGS"))
+
+    def test_an_incomplete_scan_is_not_clean_even_when_ggshield_exits_0(self):
+        failed_chunk = secret_scan.Scan("history", 0, {"type": "commit-range", "total_incidents": 0, "scans": []},
+                                        "Error: Scanning failed. Results may be incomplete.\n")
+        report_errors = secret_scan.Scan("paths", 0, {"type": "path_scan", "total_incidents": 0,
+                                                      "errors": [{"files": [], "description": "timeout"}]})
+
+        for scan in (failed_chunk, report_errors):
+            text, clean = secret_scan.summarize([scan])
+            self.assertFalse(clean, scan.scope)
+            self.assertIn(f"{scan.scope}: incomplete", text)
+            self.assertTrue(text.rstrip().endswith("VERDICT: FINDINGS"))
+
+    def test_files_skipped_for_size_are_listed_and_binary_ones_only_counted(self):
+        stderr = ("Skipped file:///tmp/unpacked/0123456789abcdef/promo.mp4: can't detect encoding\n"
+                  "Warning: Rate-limit hit, retrying in 1 seconds\n"
+                  "Skipped file:///tmp/unpacked/fedcba9876543210/big.json: content is over 1,048,576 bytes\n")
+        binary_only = secret_scan.Scan("paths", 0, {"type": "path_scan", "total_incidents": 0},
+                                       stderr.splitlines(keepends=True)[0])
+        oversized = secret_scan.Scan("paths", 0, {"type": "path_scan", "total_incidents": 0}, stderr)
+
+        text, clean = secret_scan.summarize([binary_only])
+        self.assertTrue(clean)
+        self.assertIn("paths: 0 incidents; 1 binary files not scanned (can't detect encoding)", text)
+
+        text, clean = secret_scan.summarize([oversized])
+        self.assertFalse(clean)
+        self.assertIn("  - not scanned: fedcba9876543210/big.json (content is over 1,048,576 bytes)", text)
 
     def test_a_failed_scan_is_not_clean_even_without_incidents(self):
         text, clean = secret_scan.summarize([secret_scan.Scan("history", 128, {})])
