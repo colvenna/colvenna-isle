@@ -7,3 +7,6 @@ __pycache__/
 node_modules/
 *.core
 core
+
+# Added by ggshield
+.cache_ggshield

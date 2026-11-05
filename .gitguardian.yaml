@@ -1,0 +1,32 @@
+# ggshield settings (GitGuardian's command-line scanner, configuration version 2):
+# https://docs.gitguardian.com/ggshield-docs/configuration
+# The backfill scan of 2026-11-04 (https://github.com/colvenna/colvenna-isle/issues/25), which also covered
+# the issue and pull-request text, found nothing in the history, the release assets or that text. Its 8
+# findings are in the workflow artifacts: examples of the AWS API documentation in botocore 1.42.89, which
+# control.zip bundles, each file identical to the botocore wheel on PyPI. None is a credential.
+# Each is ignored by its ignore SHA, ggshield's SHA-256 of the matched string and its type
+# (get_ignore_sha, https://github.com/GitGuardian/ggshield/blob/v1.56.1/ggshield/core/filter.py), so
+# this file holds no value. Nothing else is ignored, no path and no detector: any other value is
+# reported. Add an entry only for a value checked by hand and reviewed in its pull request
+# (CONTRIBUTING.md#secret-scanning); a real credential is revoked or rotated, never ignored.
+version: 2
+# The pre-push hook scans at most this many commits of a push (ggshield's default is 50).
+max_commits_for_hook: 1000
+secret:
+  ignored_matches:
+    - name: "an example password of the AWS API documentation that botocore 1.42.89 ships, identical to its PyPI wheel; in control.zip (Generic Password; botocore/data/iam/2010-05-08/examples-1.json, line 1155)"
+      match: 4cedb332d6bc52644c11b943d760481137bc13616e713d88efb26071446ad9e2
+    - name: "an example value of the AWS API documentation that botocore 1.42.89 ships, identical to its PyPI wheel; in control.zip (Generic High Entropy Secret; botocore/data/autoscaling/2011-01-01/examples-1.json, line 108)"
+      match: ac0fea125592fa226234be517e77f4ccf560d061e40f63b419c6aeaf2c25e759
+    - name: "an example value of the AWS API documentation that botocore 1.42.89 ships, identical to its PyPI wheel; in control.zip (Generic High Entropy Secret; botocore/data/fsx/2018-03-01/examples-1.json, line 95)"
+      match: 734b3c1568735eb724e92cf902554a95b2ef0353eb00f76e2772790cf45694db
+    - name: "an example value of the AWS API documentation that botocore 1.42.89 ships, identical to its PyPI wheel; in control.zip (Generic High Entropy Secret; botocore/data/fsx/2018-03-01/examples-1.json, line 170)"
+      match: b771630236396174c8bcbb870b1ff47aebf292ca7dcbdc9960810e1fbf27956d
+    - name: "an example value of the AWS API documentation that botocore 1.42.89 ships, identical to its PyPI wheel; in control.zip (Generic High Entropy Secret; botocore/data/kms/2014-11-01/examples-1.json, line 100)"
+      match: 542bce72c5163cec4069de29f15ce50392178c54d675c2adbf02413dc0de865c
+    - name: "an example password of the AWS API documentation that botocore 1.42.89 ships, identical to its PyPI wheel; in control.zip (Generic Password; botocore/data/kms/2014-11-01/examples-1.json, line 66)"
+      match: 6b0a0ba0ebe582e71932dea8fdc1980049d42fef48a80a86e9b2f79a5d9d356b
+    - name: "an example value of the AWS API documentation that botocore 1.42.89 ships, identical to its PyPI wheel; in control.zip (Generic High Entropy Secret; botocore/data/s3/2006-03-01/examples-1.json, line 1178)"
+      match: d02ef2f5419c5304d7e86380a99876d10bf9db37fad7afdc349e4b9b4335d25a
+    - name: "an example value of the AWS API documentation that botocore 1.42.89 ships, identical to its PyPI wheel; in control.zip (Generic High Entropy Secret; botocore/data/eks/2017-11-01/examples-1.json, line 9)"
+      match: 8cb2f6705ba5e567846cf5d9bf0675ff69e2b9db44df8b654c4b5a2a36a1e61f
